@@ -1,30 +1,146 @@
 import Phaser from "phaser";
 import { GameState } from "../state/GameState";
-import { TileType, BuildingType } from "../types";
+import { TileType, BuildingType, Season } from "../types";
 import { TILE_SIZE, GRID_COLS, GRID_ROWS, BUILDINGS } from "../config";
 
-const TILE_COLORS: Record<TileType, number> = {
-  [TileType.Grass]: 0x3d6b35,
-  [TileType.Forest]: 0x2d5a25,
-  [TileType.Water]: 0x2a5a8c,
-  [TileType.Mountain]: 0x6b6b6b,
-  [TileType.Farmable]: 0x5a7a3a,
+const TILE_BASE: Record<TileType, { r: number; g: number; b: number }> = {
+  [TileType.Grass]: { r: 74, g: 122, b: 58 },
+  [TileType.Forest]: { r: 45, g: 90, b: 37 },
+  [TileType.Water]: { r: 42, g: 106, b: 156 },
+  [TileType.Mountain]: { r: 122, g: 122, b: 122 },
+  [TileType.Farmable]: { r: 90, g: 138, b: 58 },
 };
+
+const SEASON_TINT: Record<Season, { r: number; g: number; b: number }> = {
+  [Season.Spring]: { r: 10, g: 8, b: 0 },
+  [Season.Summer]: { r: 0, g: 0, b: -10 },
+  [Season.Autumn]: { r: 15, g: -10, b: -15 },
+  [Season.Winter]: { r: -20, g: -15, b: 10 },
+};
+
+function tileColor(type: TileType, x: number, y: number, season: Season): number {
+  const base = TILE_BASE[type];
+  const noise = ((x * 7 + y * 13) % 17) / 17;
+  const variation = Math.floor((noise - 0.5) * 16);
+  const tint = SEASON_TINT[season];
+
+  const r = Phaser.Math.Clamp(base.r + variation + tint.r, 0, 255);
+  const g = Phaser.Math.Clamp(base.g + variation + tint.g, 0, 255);
+  const b = Phaser.Math.Clamp(base.b + variation + tint.b, 0, 255);
+
+  return (r << 16) | (g << 8) | b;
+}
+
+interface BuildingVisual {
+  type: BuildingType;
+  draw: (scene: Phaser.Scene, cx: number, cy: number) => Phaser.GameObjects.GameObject[];
+}
+
+const BUILDING_VISUALS: BuildingVisual[] = [
+  {
+    type: BuildingType.House,
+    draw: (scene, cx, cy) => {
+      const base = scene.add.rectangle(cx, cy + 4, 14, 10, 0x6b4a2a);
+      const roof = scene.add.triangle(cx, cy - 6, -9, 6, 0, -6, 9, 6, 0x8b3a1a);
+      const door = scene.add.rectangle(cx, cy + 6, 4, 5, 0x3a2a1a);
+      return [base, roof, door];
+    },
+  },
+  {
+    type: BuildingType.Farm,
+    draw: (scene, cx, cy) => {
+      const field1 = scene.add.rectangle(cx - 6, cy + 2, 8, 6, 0x5a8a2a);
+      const field2 = scene.add.rectangle(cx + 6, cy + 2, 8, 6, 0x4a7a1a);
+      const barn = scene.add.rectangle(cx, cy - 2, 10, 7, 0x8b5a2a);
+      const barnRoof = scene.add.triangle(cx, cy - 8, -6, 4, 0, -3, 6, 4, 0x6b3a1a);
+      return [field1, field2, barn, barnRoof];
+    },
+  },
+  {
+    type: BuildingType.LumberMill,
+    draw: (scene, cx, cy) => {
+      const shed = scene.add.rectangle(cx, cy + 2, 12, 8, 0x5a3a1a);
+      const saw = scene.add.circle(cx + 4, cy - 2, 3, 0xaaaaaa);
+      const log1 = scene.add.rectangle(cx - 5, cy + 6, 6, 3, 0x4a2a0a);
+      const log2 = scene.add.rectangle(cx + 5, cy + 6, 6, 3, 0x3a2005);
+      return [shed, saw, log1, log2];
+    },
+  },
+  {
+    type: BuildingType.Quarry,
+    draw: (scene, cx, cy) => {
+      const pit = scene.add.rectangle(cx, cy + 4, 14, 8, 0x6a6a6a);
+      const rock1 = scene.add.circle(cx - 3, cy, 4, 0x8a8a8a);
+      const rock2 = scene.add.circle(cx + 4, cy + 2, 3, 0x7a7a7a);
+      const cart = scene.add.rectangle(cx + 6, cy - 2, 5, 4, 0x5a3a1a);
+      return [pit, rock1, rock2, cart];
+    },
+  },
+  {
+    type: BuildingType.Sawmill,
+    draw: (scene, cx, cy) => {
+      const building = scene.add.rectangle(cx, cy + 2, 12, 8, 0x7a5a3a);
+      const roof = scene.add.triangle(cx, cy - 5, -7, 4, 0, -3, 7, 4, 0x5a3a1a);
+      const blade = scene.add.circle(cx + 5, cy, 3, 0xcccccc);
+      const planks = scene.add.rectangle(cx - 4, cy + 6, 8, 2, 0xb08040);
+      return [building, roof, blade, planks];
+    },
+  },
+  {
+    type: BuildingType.Brickyard,
+    draw: (scene, cx, cy) => {
+      const kiln = scene.add.rectangle(cx, cy + 2, 12, 8, 0xaa5533);
+      const chimney = scene.add.rectangle(cx + 4, cy - 6, 3, 8, 0x884422);
+      const bricks = scene.add.rectangle(cx - 4, cy + 5, 6, 3, 0xcc6644);
+      return [kiln, chimney, bricks];
+    },
+  },
+  {
+    type: BuildingType.Warehouse,
+    draw: (scene, cx, cy) => {
+      const main = scene.add.rectangle(cx, cy + 2, 14, 10, 0x555555);
+      const roof = scene.add.rectangle(cx, cy - 5, 16, 3, 0x444444);
+      const crate1 = scene.add.rectangle(cx - 3, cy + 4, 4, 4, 0x6a5a3a);
+      const crate2 = scene.add.rectangle(cx + 3, cy + 4, 4, 4, 0x5a4a2a);
+      return [main, roof, crate1, crate2];
+    },
+  },
+  {
+    type: BuildingType.Market,
+    draw: (scene, cx, cy) => {
+      const stall = scene.add.rectangle(cx, cy + 2, 14, 8, 0x8b6a3a);
+      const awning = scene.add.rectangle(cx, cy - 4, 16, 4, 0xcc3333);
+      const awning2 = scene.add.triangle(cx, cy - 8, -8, 3, 0, 0, 8, 3, 0xaa2222);
+      const goods = scene.add.circle(cx, cy + 2, 3, 0xc9a84c);
+      return [stall, awning, awning2, goods];
+    },
+  },
+  {
+    type: BuildingType.TradingPost,
+    draw: (scene, cx, cy) => {
+      const base = scene.add.rectangle(cx, cy + 2, 12, 8, 0x3a5a8a);
+      const sign = scene.add.rectangle(cx, cy - 5, 10, 3, 0x3366aa);
+      const coin = scene.add.circle(cx, cy + 1, 3, 0xc9a84c);
+      return [base, sign, coin];
+    },
+  },
+];
 
 export class TileMap {
   scene: Phaser.Scene;
   container: Phaser.GameObjects.Container;
   tiles: Phaser.GameObjects.Rectangle[][] = [];
-  buildingGraphics: Phaser.GameObjects.Rectangle[] = [];
+  buildingGfx: Phaser.GameObjects.Container[] = [];
   hoverHighlight: Phaser.GameObjects.Rectangle;
-  gridGraphics: Phaser.GameObjects.Graphics;
+  shadowLayer: Phaser.GameObjects.Graphics;
+  currentSeason: Season = Season.Spring;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.container = scene.add.container(0, 0);
 
-    this.gridGraphics = scene.add.graphics();
-    this.container.add(this.gridGraphics);
+    this.shadowLayer = scene.add.graphics();
+    this.container.add(this.shadowLayer);
 
     for (let y = 0; y < GRID_ROWS; y++) {
       this.tiles[y] = [];
@@ -36,6 +152,7 @@ export class TileMap {
           TILE_SIZE - 1,
           0x3d6b35
         );
+        rect.setStrokeStyle(1, 0x000000, 0.08);
         this.tiles[y][x] = rect;
         this.container.add(rect);
       }
@@ -49,75 +166,52 @@ export class TileMap {
   }
 
   sync(state: GameState): void {
+    if (state.season !== this.currentSeason) {
+      this.currentSeason = state.season;
+    }
+
     for (let y = 0; y < GRID_ROWS; y++) {
       for (let x = 0; x < GRID_COLS; x++) {
         const tile = state.tiles[y][x];
         const rect = this.tiles[y][x];
-        let color = TILE_COLORS[tile.type];
 
         if (tile.buildingId !== null) {
           const building = state.buildings.find((b) => b.id === tile.buildingId);
           if (building) {
-            const def = BUILDINGS[building.type];
-            color = def.color;
+            rect.setFillStyle(BUILDINGS[building.type].color);
+          } else {
+            rect.setFillStyle(tileColor(tile.type, x, y, state.season));
           }
+        } else {
+          rect.setFillStyle(tileColor(tile.type, x, y, state.season));
         }
-
-        rect.setFillStyle(color);
       }
     }
 
-    for (const gfx of this.buildingGraphics) {
+    for (const gfx of this.buildingGfx) {
       gfx.destroy();
     }
-    this.buildingGraphics = [];
+    this.buildingGfx = [];
+
+    this.shadowLayer.clear();
 
     for (const building of state.buildings) {
       const def = BUILDINGS[building.type];
       const cx = building.gridX * TILE_SIZE + (def.size.w * TILE_SIZE) / 2;
       const cy = building.gridY * TILE_SIZE + (def.size.h * TILE_SIZE) / 2;
 
-      if (building.type === BuildingType.House) {
-        const roof = this.scene.add.triangle(
-          cx,
-          cy - 6,
-          0, 8,
-          8, -4,
-          16, 8,
-          0x8b4513
-        );
-        this.container.add(roof);
-        this.buildingGraphics.push(roof as any);
-      } else if (building.type === BuildingType.Farm) {
-        const flag = this.scene.add.rectangle(cx, cy - 8, 2, 12, 0x8b4513);
-        const banner = this.scene.add.rectangle(cx + 4, cy - 12, 6, 4, 0xc9a84c);
-        this.container.add(flag);
-        this.container.add(banner);
-        this.buildingGraphics.push(flag, banner);
-      } else if (building.type === BuildingType.LumberMill) {
-        const log = this.scene.add.rectangle(cx, cy + 4, 10, 4, 0x4a3000);
-        this.container.add(log);
-        this.buildingGraphics.push(log);
-      } else if (building.type === BuildingType.Quarry) {
-        const rock = this.scene.add.circle(cx, cy + 2, 5, 0x999999);
-        this.container.add(rock);
-        this.buildingGraphics.push(rock as any);
-      } else if (building.type === BuildingType.Sawmill) {
-        const blade = this.scene.add.circle(cx, cy, 4, 0xcccccc);
-        this.container.add(blade);
-        this.buildingGraphics.push(blade as any);
-      } else if (building.type === BuildingType.Brickyard) {
-        const chimney = this.scene.add.rectangle(cx + 4, cy - 6, 3, 8, 0xaa5533);
-        this.container.add(chimney);
-        this.buildingGraphics.push(chimney);
-      } else if (building.type === BuildingType.Market) {
-        const awning = this.scene.add.rectangle(cx, cy - 4, 12, 3, 0xcc3333);
-        this.container.add(awning);
-        this.buildingGraphics.push(awning);
-      } else if (building.type === BuildingType.TradingPost) {
-        const sign = this.scene.add.rectangle(cx, cy - 6, 8, 3, 0x3366aa);
-        this.container.add(sign);
-        this.buildingGraphics.push(sign);
+      this.shadowLayer.fillStyle(0x000000, 0.15);
+      this.shadowLayer.fillEllipse(cx + 2, cy + 6, def.size.w * TILE_SIZE * 0.7, def.size.h * TILE_SIZE * 0.3);
+
+      const visual = BUILDING_VISUALS.find((v) => v.type === building.type);
+      if (visual) {
+        const objs = visual.draw(this.scene, cx, cy);
+        const container = this.scene.add.container(0, 0);
+        for (const obj of objs) {
+          container.add(obj);
+        }
+        this.container.add(container);
+        this.buildingGfx.push(container);
       }
     }
   }
@@ -127,7 +221,9 @@ export class TileMap {
       gridX * TILE_SIZE + TILE_SIZE / 2,
       gridY * TILE_SIZE + TILE_SIZE / 2
     );
+    this.hoverHighlight.setSize(TILE_SIZE, TILE_SIZE);
     this.hoverHighlight.setStrokeStyle(2, valid ? 0x00ff00 : 0xff0000);
+    this.hoverHighlight.setFillStyle(valid ? 0x00ff00 : 0xff0000, 0.1);
     this.hoverHighlight.setVisible(true);
   }
 
@@ -140,11 +236,8 @@ export class TileMap {
     const w = def.size.w * TILE_SIZE;
     const h = def.size.h * TILE_SIZE;
     this.hoverHighlight.setSize(w, h);
-    this.hoverHighlight.setPosition(
-      gridX * TILE_SIZE + w / 2,
-      gridY * TILE_SIZE + h / 2
-    );
-    this.hoverHighlight.setFillStyle(valid ? 0x00ff00 : 0xff0000, 0.25);
+    this.hoverHighlight.setPosition(gridX * TILE_SIZE + w / 2, gridY * TILE_SIZE + h / 2);
+    this.hoverHighlight.setFillStyle(valid ? 0x00ff00 : 0xff0000, 0.2);
     this.hoverHighlight.setStrokeStyle(2, valid ? 0x00ff00 : 0xff0000);
     this.hoverHighlight.setVisible(true);
   }

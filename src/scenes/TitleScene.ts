@@ -1,0 +1,105 @@
+import Phaser from "phaser";
+
+export class TitleScene extends Phaser.Scene {
+  particles!: Phaser.GameObjects.Particles.ParticleEmitter;
+
+  constructor() {
+    super({ key: "TitleScene" });
+  }
+
+  create(): void {
+    const { width, height } = this.scale;
+
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x0f0f1e);
+
+    for (let i = 0; i < 40; i++) {
+      const x = Phaser.Math.Between(0, width);
+      const y = Phaser.Math.Between(0, height);
+      const size = Phaser.Math.Between(1, 3);
+      const alpha = Phaser.Math.FloatBetween(0.1, 0.4);
+      const star = this.add.circle(x, y, size, 0xc9a84c, alpha);
+      this.tweens.add({
+        targets: star,
+        alpha: { from: alpha, to: alpha * 0.3 },
+        duration: Phaser.Math.Between(2000, 5000),
+        yoyo: true,
+        repeat: -1,
+      });
+    }
+
+    const titleShadow = this.add.text(width / 2 + 2, height / 2 - 62, "DOMINATUS", {
+      fontSize: "72px",
+      fontFamily: "Georgia, 'Times New Roman', serif",
+      color: "#000000",
+    });
+    titleShadow.setOrigin(0.5);
+    titleShadow.setAlpha(0.4);
+
+    const title = this.add.text(width / 2, height / 2 - 64, "DOMINATUS", {
+      fontSize: "72px",
+      fontFamily: "Georgia, 'Times New Roman', serif",
+      color: "#c9a84c",
+      stroke: "#1a1a2e",
+      strokeThickness: 4,
+    });
+    title.setOrigin(0.5);
+
+    this.tweens.add({
+      targets: title,
+      y: height / 2 - 60,
+      duration: 3000,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+
+    const divider = this.add.rectangle(width / 2, height / 2, 200, 1, 0xc9a84c, 0.4);
+
+    const subtitle = this.add.text(width / 2, height / 2 + 30, "Build your empire. Shape your destiny.", {
+      fontSize: "16px",
+      fontFamily: "Georgia, serif",
+      color: "#b0a890",
+      fontStyle: "italic",
+    });
+    subtitle.setOrigin(0.5);
+    subtitle.setAlpha(0);
+    this.tweens.add({ targets: subtitle, alpha: 1, duration: 1500, delay: 500 });
+
+    const startText = this.add.text(width / 2, height / 2 + 100, "[ Click to Begin ]", {
+      fontSize: "14px",
+      fontFamily: "'Courier New', monospace",
+      color: "#888888",
+    });
+    startText.setOrigin(0.5);
+    this.tweens.add({
+      targets: startText,
+      alpha: { from: 0.4, to: 1 },
+      duration: 1200,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    const version = this.add.text(width - 16, height - 16, "v0.2.0 — Prototype", {
+      fontSize: "10px",
+      fontFamily: "'Courier New', monospace",
+      color: "#444444",
+    });
+    version.setOrigin(1, 1);
+
+    const controls = this.add.text(width / 2, height - 40, "1-9: Build  |  Right-click: Demolish  |  T: Trade  |  Space: Speed  |  Scroll: Zoom", {
+      fontSize: "10px",
+      fontFamily: "'Courier New', monospace",
+      color: "#555555",
+    });
+    controls.setOrigin(0.5);
+
+    this.input.once("pointerdown", () => {
+      this.cameras.main.fadeOut(600, 15, 15, 30);
+      this.time.delayedCall(600, () => {
+        this.scene.start("GameScene");
+      });
+    });
+
+    this.cameras.main.fadeIn(800, 15, 15, 30);
+  }
+}

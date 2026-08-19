@@ -92,6 +92,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.lastTick = this.time.now;
+    this.cameras.main.fadeIn(400, 15, 15, 30);
   }
 
   private selectBuild(type: BuildingType): void {
@@ -191,6 +192,14 @@ export class GameScene extends Phaser.Scene {
 
       this.tileMap.sync(this.state);
       this.hud.update(this.state);
+
+      const seasonBgs: Record<string, number> = {
+        spring: 0x1a2a1e,
+        summer: 0x1a1a2e,
+        autumn: 0x2a1a1a,
+        winter: 0x1a1a2a,
+      };
+      this.cameras.main.setBackgroundColor(seasonBgs[this.state.season] || 0x0f0f1e);
     }
   }
 }
