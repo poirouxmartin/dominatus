@@ -24,6 +24,16 @@ export class EventSystem {
   private triggerStorm(state: GameState): void {
     if (state.buildings.length === 0) return;
 
+    if (state.hasWalls()) {
+      state.addEvent({
+        type: EventType.Storm,
+        message: "Storm approaching — walls protect your settlement!",
+        tickRemaining: 3,
+        effect: () => {},
+      });
+      return;
+    }
+
     const target = state.buildings[Math.floor(Math.random() * state.buildings.length)];
     state.addEvent({
       type: EventType.Storm,
@@ -56,12 +66,13 @@ export class EventSystem {
   private triggerFestival(state: GameState): void {
     if (state.population.total <= 0) return;
 
+    const bonus = state.researchedTechs.includes("law") ? 30 : 20;
     state.addEvent({
       type: EventType.Festival,
-      message: "Harvest festival! +20 happiness, +10 food",
+      message: `Harvest festival! +${bonus} happiness, +10 food`,
       tickRemaining: 2,
       effect: (s: GameState) => {
-        s.population.happiness = Math.min(100, s.population.happiness + 20);
+        s.population.happiness = Math.min(100, s.population.happiness + bonus);
         s.addResources({ [ResourceType.Food]: 10 });
       },
     });

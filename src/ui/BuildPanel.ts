@@ -1,8 +1,9 @@
 import Phaser from "phaser";
 import { BuildingType, ResourceType } from "../types";
+import { GameState } from "../state/GameState";
 import { BUILDINGS } from "../config";
 
-const BUILD_ORDER: BuildingType[] = [
+const ALL_BUILD_ORDER: BuildingType[] = [
   BuildingType.House,
   BuildingType.Farm,
   BuildingType.LumberMill,
@@ -12,16 +13,12 @@ const BUILD_ORDER: BuildingType[] = [
   BuildingType.Warehouse,
   BuildingType.Market,
   BuildingType.TradingPost,
+  BuildingType.ResearchLab,
+  BuildingType.Garden,
+  BuildingType.Inn,
+  BuildingType.Academy,
+  BuildingType.Wall,
 ];
-
-const SHORT: Record<ResourceType, string> = {
-  [ResourceType.Wood]: "w",
-  [ResourceType.Food]: "f",
-  [ResourceType.Stone]: "s",
-  [ResourceType.Gold]: "g",
-  [ResourceType.Planks]: "p",
-  [ResourceType.Bricks]: "b",
-};
 
 const ICONS: Record<ResourceType, string> = {
   [ResourceType.Wood]: "\u{1FAB5}",
@@ -30,6 +27,7 @@ const ICONS: Record<ResourceType, string> = {
   [ResourceType.Gold]: "\u{1F4B0}",
   [ResourceType.Planks]: "\u{1FAA3}",
   [ResourceType.Bricks]: "\u{1F9F1}",
+  [ResourceType.Research]: "\u{1F4D6}",
 };
 
 export class BuildPanel {
@@ -39,6 +37,7 @@ export class BuildPanel {
   selectedType: BuildingType | null;
   onBuild: (type: BuildingType) => void;
   tooltip: Phaser.GameObjects.Container | null = null;
+  state: GameState | null = null;
 
   constructor(scene: Phaser.Scene, onBuild: (type: BuildingType) => void) {
     this.scene = scene;
@@ -51,18 +50,43 @@ export class BuildPanel {
     panelBg.setStrokeStyle(1, 0xc9a84c, 0.2);
     this.container.add(panelBg);
 
+    this.container.setDepth(100);
+  }
+
+  rebuild(state: GameState): void {
+    this.state = state;
+    for (const btn of this.buttons) {
+      btn.bg.destroy();
+      btn.label.destroy();
+    }
+    this.buttons = [];
+    this.hideTooltip();
+
     let xOff = 8;
-    const btnW = 136;
     const gap = 3;
 
-    for (const type of BUILD_ORDER) {
+    const visibleTypes = ALL_BUILD_ORDER.filter((type) => {
+      const def = BUILDINGS[type];
+      if (!def.requiredTech) return true;
+      return state.researchedTechs.includes(def.requiredTech);
+    });
+
+    const lockedTypes = ALL_BUILD_ORDER.filter((type) => {
+      const def = BUILDINGS[type];
+      if (!def.requiredTech) return false;
+      return !state.researchedTechs.includes(def.requiredTech);
+    });
+
+    const btnW = Math.min(136, Math.floor((1264 - (visibleTypes.length + lockedTypes.length) * gap) / (visibleTypes.length + lockedTypes.length)));
+
+    for (const type of visibleTypes) {
       const def = BUILDINGS[type];
 
-      const bg = scene.add.rectangle(xOff + btnW / 2, 695, btnW, 42, 0x1a1a2e, 0.95);
+      const bg = this.scene.add.rectangle(xOff + btnW / 2, 695, btnW, 42, 0x1a1a2e, 0.95);
       bg.setStrokeStyle(1, 0x333355);
       bg.setInteractive({ useHandCursor: true });
 
-      const label = scene.add.text(xOff + 8, 686, def.name, {
+      const label = this.scene.add.text(xOff + 6, 686, def.name, {
         fontSize: "10px",
         fontFamily: "Arial, sans-serif",
         color: "#e8e0d0",
@@ -75,7 +99,7 @@ export class BuildPanel {
           return `${ICONS[res] || ""}${a}`;
         });
 
-      const cost = scene.add.text(xOff + 8, 700, costParts.join(" "), {
+      const cost = this.scene.add.text(xOff + 6, 700, costParts.join(" "), {
         fontSize: "9px",
         fontFamily: "'Courier New', monospace",
         color: "#888888",
@@ -102,7 +126,22 @@ export class BuildPanel {
       xOff += btnW + gap;
     }
 
-    this.container.setDepth(100);
+    for (const type of lockedTypes) {
+      const def = BUILDINGS[type];
+
+      const bg = this.scene.add.rectangle(xOff + btnW / 2, 695, btnW, 42, 0x1a1a1a, 0.6);
+      bg.setStrokeStyle(1, 0x222222);
+
+      const label = this.scene.add.text(xOff + 6, 686, `\u{1F512} ${def.name}`, {
+        fontSize: "10px",
+        fontFamily: "Arial, sans-serif",
+        color: "#444444",
+      });
+
+      this.container.add([bg, label]);
+      this.buttons.push({ type, bg, label });
+      xOff += btnW + gap;
+    }
   }
 
   private showTooltip(type: BuildingType, x: number, y: number): void {
@@ -111,7 +150,7 @@ export class BuildPanel {
 
     this.tooltip = this.scene.add.container(0, 0);
 
-    const bg = this.scene.add.rectangle(x, y - 20, 220, 40, 0x0f0f1e, 0.95);
+    const bg = this.scene.add.rectangle(x, y - 20, 240, 40, 0x0f0f1e, 0.95);
     bg.setStrokeStyle(1, 0xc9a84c, 0.5);
     this.tooltip.add(bg);
 
@@ -119,7 +158,7 @@ export class BuildPanel {
       fontSize: "10px",
       fontFamily: "Arial, sans-serif",
       color: "#b0a890",
-      wordWrap: { width: 200 },
+      wordWrap: { width: 220 },
     });
     desc.setOrigin(0.5);
     this.tooltip.add(desc);
@@ -143,6 +182,16 @@ export class BuildPanel {
       this.tooltip.add(prodText);
     }
 
+    if (def.requiredTech && this.state && !this.state.researchedTechs.includes(def.requiredTech)) {
+      const lockText = this.scene.add.text(x, y - 4, `Requires tech: ${def.requiredTech}`, {
+        fontSize: "8px",
+        fontFamily: "Arial, sans-serif",
+        color: "#d9534f",
+      });
+      lockText.setOrigin(0.5);
+      this.tooltip.add(lockText);
+    }
+
     this.tooltip.setDepth(110);
   }
 
@@ -160,9 +209,10 @@ export class BuildPanel {
         btn.bg.setStrokeStyle(2, 0xc9a84c);
         btn.label.setColor("#c9a84c");
       } else {
-        btn.bg.setFillStyle(0x1a1a2e);
-        btn.bg.setStrokeStyle(1, 0x333355);
-        btn.label.setColor("#e8e0d0");
+        const isLocked = btn.label.text.startsWith("\u{1F512}");
+        btn.bg.setFillStyle(isLocked ? 0x1a1a1a : 0x1a1a2e);
+        btn.bg.setStrokeStyle(1, isLocked ? 0x222222 : 0x333355);
+        btn.label.setColor(isLocked ? "#444444" : "#e8e0d0");
       }
     }
   }

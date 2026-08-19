@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { GameState } from "../state/GameState";
 import { ResourceType, Season } from "../types";
-import { BUILDINGS, TRADE_PRICES } from "../config";
+import { BUILDINGS, TRADE_PRICES, TECH_TREE } from "../config";
 
 const SEASON_COLORS: Record<string, string> = {
   [Season.Spring]: "#6bba5c",
@@ -24,6 +24,7 @@ const RES_ICONS: Record<ResourceType, string> = {
   [ResourceType.Gold]: "\u{1F4B0}",
   [ResourceType.Planks]: "\u{1FAA3}",
   [ResourceType.Bricks]: "\u{1F9F1}",
+  [ResourceType.Research]: "\u{1F4D6}",
 };
 
 const RES_ORDER: ResourceType[] = [
@@ -33,6 +34,7 @@ const RES_ORDER: ResourceType[] = [
   ResourceType.Gold,
   ResourceType.Planks,
   ResourceType.Bricks,
+  ResourceType.Research,
 ];
 
 export class HUD {
@@ -42,8 +44,10 @@ export class HUD {
   seasonText: Phaser.GameObjects.Text;
   popText: Phaser.GameObjects.Text;
   happinessText: Phaser.GameObjects.Text;
+  tierText: Phaser.GameObjects.Text;
   speedText: Phaser.GameObjects.Text;
   infoText: Phaser.GameObjects.Text;
+  researchInfoText: Phaser.GameObjects.Text;
   eventTexts: Phaser.GameObjects.Text[];
   tradePanel: Phaser.GameObjects.Container | null = null;
   tradeVisible: boolean = false;
@@ -67,7 +71,7 @@ export class HUD {
       });
       this.resourceTexts[res] = txt;
       this.container.add([icon, txt]);
-      xOff += 78;
+      xOff += 68;
     }
 
     const sep = scene.add.rectangle(xOff + 4, 22, 1, 28, 0xc9a84c, 0.3);
@@ -81,14 +85,21 @@ export class HUD {
     });
     this.container.add(this.seasonText);
 
-    this.popText = scene.add.text(xOff + 130, 13, "", {
+    this.popText = scene.add.text(xOff + 120, 13, "", {
       fontSize: "13px",
       fontFamily: "'Courier New', monospace",
       color: "#e8e0d0",
     });
     this.container.add(this.popText);
 
-    this.happinessText = scene.add.text(xOff + 230, 13, "", {
+    this.tierText = scene.add.text(xOff + 210, 13, "", {
+      fontSize: "11px",
+      fontFamily: "'Courier New', monospace",
+      color: "#c9a84c",
+    });
+    this.container.add(this.tierText);
+
+    this.happinessText = scene.add.text(xOff + 270, 13, "", {
       fontSize: "13px",
       fontFamily: "'Courier New', monospace",
       color: "#e8e0d0",
@@ -111,6 +122,15 @@ export class HUD {
     this.infoText.setOrigin(0.5);
     this.container.add(this.infoText);
 
+    this.researchInfoText = scene.add.text(12, 48, "", {
+      fontSize: "11px",
+      fontFamily: "'Courier New', monospace",
+      color: "#5588cc",
+      backgroundColor: "#0f0f1eDD",
+      padding: { x: 6, y: 3 },
+    });
+    this.container.add(this.researchInfoText);
+
     this.container.setDepth(100);
   }
 
@@ -128,6 +148,9 @@ export class HUD {
     const cap = state.buildings.reduce((sum, b) => sum + BUILDINGS[b.type].populationCapacity, 0);
     this.popText.setText(`Pop: ${pop}/${cap}`);
 
+    const tierLabel = state.population.tier >= 2 ? "Citizen" : "Settler";
+    this.tierText.setText(`Tier: ${tierLabel}`);
+
     const happy = Math.floor(state.population.happiness);
     const happyColor = happy >= 70 ? "#6bba5c" : happy >= 40 ? "#f0c05e" : "#d9534f";
     this.happinessText.setText(`\u2665 ${happy}%`);
@@ -139,11 +162,24 @@ export class HUD {
     if (state.gameOver) {
       this.infoText.setText("GAME OVER \u2014 Your people have perished.");
       this.infoText.setColor("#d9534f");
+    } else if (state.victory) {
+      this.infoText.setText("VICTORY \u2014 Your civilization thrives!");
+      this.infoText.setColor("#6bba5c");
     } else if (state.season === Season.Winter) {
       this.infoText.setText("\u2744 Winter \u2014 Food production reduced. Stockpile reserves!");
       this.infoText.setColor("#70c8e8");
     } else {
       this.infoText.setText("");
+    }
+
+    if (state.researchTarget) {
+      const techDef = TECH_TREE.find((t) => t.id === state.researchTarget);
+      if (techDef) {
+        const pct = Math.floor((state.researchProgress / techDef.cost) * 100);
+        this.researchInfoText.setText(`\u{1F4D6} ${techDef.name}: ${pct}%`);
+      }
+    } else {
+      this.researchInfoText.setText("");
     }
 
     for (const t of this.eventTexts) t.destroy();

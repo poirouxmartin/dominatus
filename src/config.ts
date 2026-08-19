@@ -1,4 +1,4 @@
-import { BuildingDef, BuildingType, ResourceType, TileType } from "./types";
+import { BuildingDef, BuildingType, ResourceType, TileType, TechDef, TechBranch } from "./types";
 
 export const GRID_COLS = 30;
 export const GRID_ROWS = 20;
@@ -15,10 +15,155 @@ export const STARTING_RESOURCES: Record<ResourceType, number> = {
   [ResourceType.Gold]: 100,
   [ResourceType.Planks]: 0,
   [ResourceType.Bricks]: 0,
+  [ResourceType.Research]: 0,
 };
 
 export const STORAGE_BASE = 200;
 export const STORAGE_PER_WAREHOUSE = 200;
+
+export const TECH_TREE: TechDef[] = [
+  // Agriculture branch
+  {
+    id: "crop_rotation",
+    name: "Crop Rotation",
+    description: "Improved farming techniques. +25% food production.",
+    branch: TechBranch.Agriculture,
+    cost: 20,
+    requires: [],
+    unlocks: [],
+    bonuses: { foodMultiplier: 0.25 },
+  },
+  {
+    id: "irrigation",
+    name: "Irrigation",
+    description: "Water channels for fields. Farms produce in winter.",
+    branch: TechBranch.Agriculture,
+    cost: 40,
+    requires: ["crop_rotation"],
+    unlocks: [BuildingType.Garden],
+    bonuses: {},
+  },
+  {
+    id: "selective_breeding",
+    name: "Selective Breeding",
+    description: "Better livestock and crops. +50% food, +5 happiness.",
+    branch: TechBranch.Agriculture,
+    cost: 60,
+    requires: ["irrigation"],
+    unlocks: [],
+    bonuses: { foodMultiplier: 0.5, happinessBonus: 5 },
+  },
+
+  // Industry branch
+  {
+    id: "advanced_carpentry",
+    name: "Advanced Carpentry",
+    description: "Efficient wood processing. +25% wood production.",
+    branch: TechBranch.Industry,
+    cost: 20,
+    requires: [],
+    unlocks: [],
+    bonuses: { woodMultiplier: 0.25 },
+  },
+  {
+    id: "masonry",
+    name: "Masonry",
+    description: "Stronger stone cutting. +25% stone, unlocks Academy.",
+    branch: TechBranch.Industry,
+    cost: 40,
+    requires: ["advanced_carpentry"],
+    unlocks: [BuildingType.Academy],
+    bonuses: { stoneMultiplier: 0.25 },
+  },
+  {
+    id: "engineering",
+    name: "Engineering",
+    description: "Advanced construction. Unlocks Wall, +200 storage.",
+    branch: TechBranch.Industry,
+    cost: 60,
+    requires: ["masonry"],
+    unlocks: [BuildingType.Wall],
+    bonuses: { storageBonus: 200 },
+  },
+
+  // Commerce branch
+  {
+    id: "currency",
+    name: "Currency",
+    description: "Standardized coinage. +25% gold from markets.",
+    branch: TechBranch.Commerce,
+    cost: 20,
+    requires: [],
+    unlocks: [],
+    bonuses: { goldMultiplier: 0.25 },
+  },
+  {
+    id: "banking",
+    name: "Banking",
+    description: "Financial institutions. Trade prices -20%.",
+    branch: TechBranch.Commerce,
+    cost: 40,
+    requires: ["currency"],
+    unlocks: [BuildingType.Inn],
+    bonuses: {},
+  },
+  {
+    id: "trade_fleet",
+    name: "Trade Fleet",
+    description: "Merchant ships. +50% gold, +10 happiness.",
+    branch: TechBranch.Commerce,
+    cost: 60,
+    requires: ["banking"],
+    unlocks: [],
+    bonuses: { goldMultiplier: 0.5, happinessBonus: 10 },
+  },
+
+  // Civic branch
+  {
+    id: "philosophy",
+    name: "Philosophy",
+    description: "Love of wisdom. Unlocks Research Lab.",
+    branch: TechBranch.Civic,
+    cost: 20,
+    requires: [],
+    unlocks: [BuildingType.ResearchLab],
+    bonuses: {},
+  },
+  {
+    id: "law",
+    name: "Law",
+    description: "Written laws. +15 happiness.",
+    branch: TechBranch.Civic,
+    cost: 40,
+    requires: ["philosophy"],
+    unlocks: [],
+    bonuses: { happinessBonus: 15 },
+  },
+  {
+    id: "democracy",
+    name: "Democracy",
+    description: "Government by the people. +25 happiness, victory unlocked.",
+    branch: TechBranch.Civic,
+    cost: 80,
+    requires: ["law"],
+    unlocks: [],
+    bonuses: { happinessBonus: 25 },
+  },
+];
+
+export const TECH_BRANCH_LABELS: Record<TechBranch, string> = {
+  [TechBranch.Agriculture]: "Agriculture",
+  [TechBranch.Industry]: "Industry",
+  [TechBranch.Commerce]: "Commerce",
+  [TechBranch.Civic]: "Civic",
+};
+
+export const TECH_BRANCH_COLORS: Record<TechBranch, string> = {
+  [TechBranch.Agriculture]: "#6bba5c",
+  [TechBranch.Industry]: "#aa5533",
+  [TechBranch.Commerce]: "#c9a84c",
+  [TechBranch.Civic]: "#5588cc",
+};
 
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   [BuildingType.House]: {
@@ -156,6 +301,83 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     requiredTile: null,
     color: 0x3366aa,
   },
+  [BuildingType.ResearchLab]: {
+    type: BuildingType.ResearchLab,
+    name: "Research Lab",
+    description: "Generates research points.",
+    cost: { [ResourceType.Wood]: 30, [ResourceType.Stone]: 20, [ResourceType.Planks]: 15 },
+    production: {
+      input: { [ResourceType.Food]: 1 },
+      output: { [ResourceType.Research]: 2 },
+      ticksPerCycle: 4,
+    },
+    populationCapacity: 0,
+    populationNeed: 2,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0x5588cc,
+    requiredTech: "philosophy",
+  },
+  [BuildingType.Garden]: {
+    type: BuildingType.Garden,
+    name: "Garden",
+    description: "Beautiful gardens. +10 happiness radius.",
+    cost: { [ResourceType.Wood]: 20, [ResourceType.Stone]: 10 },
+    production: null,
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0x44aa44,
+    requiredTech: "irrigation",
+  },
+  [BuildingType.Inn]: {
+    type: BuildingType.Inn,
+    name: "Inn",
+    description: "Tavern for citizens. +15 happiness radius.",
+    cost: { [ResourceType.Wood]: 30, [ResourceType.Stone]: 15, [ResourceType.Planks]: 10 },
+    production: {
+      input: { [ResourceType.Food]: 2 },
+      output: { [ResourceType.Gold]: 2 },
+      ticksPerCycle: 4,
+    },
+    populationCapacity: 0,
+    populationNeed: 1,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0x8b5a2a,
+    requiredTech: "banking",
+  },
+  [BuildingType.Academy]: {
+    type: BuildingType.Academy,
+    name: "Academy",
+    description: "Advanced research. +3 research per cycle.",
+    cost: { [ResourceType.Wood]: 40, [ResourceType.Stone]: 30, [ResourceType.Planks]: 20, [ResourceType.Bricks]: 10 },
+    production: {
+      input: { [ResourceType.Food]: 2 },
+      output: { [ResourceType.Research]: 4 },
+      ticksPerCycle: 5,
+    },
+    populationCapacity: 0,
+    populationNeed: 3,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0x4466aa,
+    requiredTech: "masonry",
+  },
+  [BuildingType.Wall]: {
+    type: BuildingType.Wall,
+    name: "Wall",
+    description: "Fortification. +5 happiness, blocks storms.",
+    cost: { [ResourceType.Stone]: 20, [ResourceType.Bricks]: 10 },
+    production: null,
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0x888888,
+    requiredTech: "engineering",
+  },
 };
 
 export const TRADE_PRICES: Record<ResourceType, { buy: number; sell: number }> = {
@@ -165,6 +387,7 @@ export const TRADE_PRICES: Record<ResourceType, { buy: number; sell: number }> =
   [ResourceType.Gold]: { buy: 999, sell: 0 },
   [ResourceType.Planks]: { buy: 10, sell: 5 },
   [ResourceType.Bricks]: { buy: 12, sell: 6 },
+  [ResourceType.Research]: { buy: 999, sell: 0 },
 };
 
 export const EVENT_CHECK_INTERVAL = 15;
@@ -177,3 +400,10 @@ export const HAPPINESS_PER_HOUSE = 5;
 export const POPULATION_GROWTH_THRESHOLD = 70;
 export const POPULATION_GROWTH_RATE = 0.1;
 export const STARVATION_DAMAGE = 2;
+
+export const CITIZEN_HAPPINESS_THRESHOLD = 80;
+export const CITIZEN_FOOD_MULTIPLIER = 1.5;
+export const RESEARCH_PER_PERSON = 0.02;
+
+export const VICTORY_POPULATION = 30;
+export const VICTORY_TECHS = 10;

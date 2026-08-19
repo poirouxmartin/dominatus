@@ -1,6 +1,17 @@
 import { GameState } from "../state/GameState";
 import { ResourceType, BuildingType } from "../types";
-import { BUILDINGS, BASE_HAPPINESS, FOOD_PER_PERSON, HAPPINESS_PER_FOOD, HAPPINESS_PER_HOUSE, POPULATION_GROWTH_THRESHOLD, POPULATION_GROWTH_RATE, STARVATION_DAMAGE } from "../config";
+import {
+  BUILDINGS,
+  BASE_HAPPINESS,
+  FOOD_PER_PERSON,
+  HAPPINESS_PER_FOOD,
+  HAPPINESS_PER_HOUSE,
+  POPULATION_GROWTH_THRESHOLD,
+  POPULATION_GROWTH_RATE,
+  STARVATION_DAMAGE,
+  CITIZEN_HAPPINESS_THRESHOLD,
+  CITIZEN_FOOD_MULTIPLIER,
+} from "../config";
 
 export class PopulationSystem {
   update(state: GameState): void {
@@ -8,19 +19,28 @@ export class PopulationSystem {
 
     let capacity = 0;
     let houseCount = 0;
+    let gardenCount = 0;
+    let innCount = 0;
+    let wallCount = 0;
 
     for (const b of state.buildings) {
       const def = BUILDINGS[b.type];
       capacity += def.populationCapacity;
       if (b.type === BuildingType.House) houseCount++;
+      if (b.type === BuildingType.Garden) gardenCount++;
+      if (b.type === BuildingType.Inn) innCount++;
+      if (b.type === BuildingType.Wall) wallCount++;
     }
 
-    state.population.foodConsumption = state.population.total * FOOD_PER_PERSON;
+    const foodMultiplier = state.population.tier >= 2 ? CITIZEN_FOOD_MULTIPLIER : 1;
+    state.population.foodConsumption = state.population.total * FOOD_PER_PERSON * foodMultiplier;
 
     const foodAvailable = state.resources[ResourceType.Food];
     const hasEnoughFood = foodAvailable >= state.population.foodConsumption;
 
     let happiness = BASE_HAPPINESS;
+    const techBonuses = state.getTechBonuses();
+    happiness += techBonuses.happinessBonus;
 
     if (hasEnoughFood) {
       state.resources[ResourceType.Food] -= state.population.foodConsumption;
@@ -30,18 +50,24 @@ export class PopulationSystem {
     }
 
     happiness += houseCount * HAPPINESS_PER_HOUSE;
+    happiness += gardenCount * 10;
+    happiness += innCount * 15;
+    happiness += wallCount * 5;
 
     if (state.population.total > 0 && state.population.total >= capacity) {
       happiness -= 10;
     }
 
-    const hasTradingPost = state.buildings.some((b) => b.type === BuildingType.TradingPost);
+    const hasTradingPost = state.buildings.some(
+      (b) => b.type === BuildingType.TradingPost || b.type === BuildingType.Inn
+    );
     if (hasTradingPost) happiness += 5;
 
     happiness = Math.max(0, Math.min(100, happiness));
     state.population.happiness = happiness;
 
-    if (state.population.total < capacity && hasEnoughFood && happiness >= POPULATION_GROWTH_THRESHOLD) {
+    const growthThreshold = state.population.tier >= 2 ? POPULATION_GROWTH_THRESHOLD + 10 : POPULATION_GROWTH_THRESHOLD;
+    if (state.population.total < capacity && hasEnoughFood && happiness >= growthThreshold) {
       const growth = POPULATION_GROWTH_RATE * (happiness / 100);
       state.population.total = Math.min(capacity, state.population.total + growth);
     }
@@ -51,6 +77,11 @@ export class PopulationSystem {
     if (!hasEnoughFood && state.population.total > 0) {
       state.population.total = Math.max(0, state.population.total - 0.05);
       state.population.total = Math.floor(state.population.total * 10) / 10;
+    }
+
+    const hasMarket = state.buildings.some((b) => b.type === BuildingType.Market || b.type === BuildingType.Inn);
+    if (happiness >= CITIZEN_HAPPINESS_THRESHOLD && hasMarket && state.population.tier === 1 && state.population.total >= 8) {
+      state.population.tier = 2;
     }
   }
 }

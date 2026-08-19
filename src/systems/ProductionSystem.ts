@@ -4,6 +4,8 @@ import { BUILDINGS } from "../config";
 
 export class ProductionSystem {
   update(state: GameState): void {
+    const bonuses = state.getTechBonuses();
+
     for (const building of state.buildings) {
       if (!building.active) continue;
 
@@ -24,7 +26,10 @@ export class ProductionSystem {
 
       let ticksPerCycle = def.production.ticksPerCycle;
       if (state.season === Season.Winter && def.production.winterMultiplier) {
-        ticksPerCycle = Math.ceil(ticksPerCycle / def.production.winterMultiplier);
+        const hasIrrigation = state.researchedTechs.includes("irrigation");
+        if (!hasIrrigation) {
+          ticksPerCycle = Math.ceil(ticksPerCycle / def.production.winterMultiplier);
+        }
       }
 
       if (building.productionTimer >= ticksPerCycle) {
@@ -36,7 +41,16 @@ export class ProductionSystem {
 
         const output: Partial<Resources> = {};
         for (const [res, amt] of Object.entries(def.production.output)) {
-          if (amt) output[res as ResourceType] = amt;
+          if (!amt) continue;
+          const key = res as ResourceType;
+          let finalAmt = amt;
+
+          if (key === ResourceType.Food) finalAmt = Math.ceil(finalAmt * bonuses.foodMultiplier);
+          if (key === ResourceType.Wood) finalAmt = Math.ceil(finalAmt * bonuses.woodMultiplier);
+          if (key === ResourceType.Stone) finalAmt = Math.ceil(finalAmt * bonuses.stoneMultiplier);
+          if (key === ResourceType.Gold) finalAmt = Math.ceil(finalAmt * bonuses.goldMultiplier);
+
+          output[key] = finalAmt;
         }
         state.addResources(output);
       }

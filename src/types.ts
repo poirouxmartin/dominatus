@@ -5,6 +5,7 @@ export enum ResourceType {
   Gold = "gold",
   Planks = "planks",
   Bricks = "bricks",
+  Research = "research",
 }
 
 export enum TileType {
@@ -25,6 +26,11 @@ export enum BuildingType {
   Warehouse = "warehouse",
   Market = "market",
   TradingPost = "tradingPost",
+  ResearchLab = "researchLab",
+  Garden = "garden",
+  Inn = "inn",
+  Academy = "academy",
+  Wall = "wall",
 }
 
 export enum Season {
@@ -41,6 +47,31 @@ export enum EventType {
   Plague = "plague",
 }
 
+export enum TechBranch {
+  Agriculture = "agriculture",
+  Industry = "industry",
+  Commerce = "commerce",
+  Civic = "civic",
+}
+
+export interface TechDef {
+  id: string;
+  name: string;
+  description: string;
+  branch: TechBranch;
+  cost: number;
+  requires: string[];
+  unlocks: BuildingType[];
+  bonuses: Partial<{
+    foodMultiplier: number;
+    woodMultiplier: number;
+    stoneMultiplier: number;
+    goldMultiplier: number;
+    happinessBonus: number;
+    storageBonus: number;
+  }>;
+}
+
 export interface GameEvent {
   type: EventType;
   message: string;
@@ -55,6 +86,7 @@ export interface Resources {
   [ResourceType.Gold]: number;
   [ResourceType.Planks]: number;
   [ResourceType.Bricks]: number;
+  [ResourceType.Research]: number;
 }
 
 export interface ProductionDef {
@@ -75,6 +107,7 @@ export interface BuildingDef {
   size: { w: number; h: number };
   requiredTile: TileType | null;
   color: number;
+  requiredTech?: string;
 }
 
 export interface PlacedBuilding {
@@ -97,6 +130,7 @@ export interface PopulationStats {
   total: number;
   happiness: number;
   foodConsumption: number;
+  tier: number;
 }
 
 export interface TradeOffer {

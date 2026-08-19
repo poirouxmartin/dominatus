@@ -18,6 +18,8 @@ import {
   STORAGE_PER_WAREHOUSE,
   BUILDINGS,
   TRADE_PRICES,
+  TECH_TREE,
+  CITIZEN_HAPPINESS_THRESHOLD,
 } from "../config";
 
 export class GameState {
@@ -31,9 +33,13 @@ export class GameState {
   population: PopulationStats;
   storageCapacity: number;
   gameOver: boolean;
+  victory: boolean;
   gameSpeed: number;
   activeEvents: GameEvent[];
   lastEventTick: number;
+  researchedTechs: string[];
+  researchTarget: string | null;
+  researchProgress: number;
 
   constructor() {
     this.resources = { ...STARTING_RESOURCES };
@@ -43,12 +49,16 @@ export class GameState {
     this.season = Season.Spring;
     this.seasonTick = 0;
     this.totalTicks = 0;
-    this.population = { total: 0, happiness: 50, foodConsumption: 0 };
+    this.population = { total: 0, happiness: 50, foodConsumption: 0, tier: 1 };
     this.storageCapacity = STORAGE_BASE;
     this.gameOver = false;
+    this.victory = false;
     this.gameSpeed = 1;
     this.activeEvents = [];
     this.lastEventTick = 0;
+    this.researchedTechs = [];
+    this.researchTarget = null;
+    this.researchProgress = 0;
 
     this.generateMap();
   }
@@ -92,6 +102,8 @@ export class GameState {
   canPlaceBuilding(type: BuildingType, gridX: number, gridY: number): boolean {
     const def = BUILDINGS[type];
     if (!def) return false;
+
+    if (def.requiredTech && !this.researchedTechs.includes(def.requiredTech)) return false;
 
     for (let dy = 0; dy < def.size.h; dy++) {
       for (let dx = 0; dx < def.size.w; dx++) {
@@ -150,7 +162,7 @@ export class GameState {
 
     const refund: Partial<Resources> = {};
     for (const [res, amt] of Object.entries(def.cost)) {
-      refund[res as ResourceType] = Math.floor((amt as number) * 0.5);
+      if (amt) refund[res as ResourceType] = Math.floor(amt * 0.5);
     }
     this.addResources(refund);
 
@@ -186,6 +198,10 @@ export class GameState {
     for (const b of this.buildings) {
       if (b.type === BuildingType.Warehouse) cap += STORAGE_PER_WAREHOUSE;
     }
+    const engTech = TECH_TREE.find((t) => t.id === "engineering");
+    if (engTech && this.researchedTechs.includes("engineering")) {
+      cap += engTech.bonuses.storageBonus ?? 0;
+    }
     this.storageCapacity = cap;
   }
 
@@ -197,10 +213,54 @@ export class GameState {
     if (this.population.total > capacity) {
       this.population.total = capacity;
     }
+
+    const happiness = this.population.happiness;
+    const hasMarket = this.buildings.some((b) => b.type === BuildingType.Market || b.type === BuildingType.Inn);
+    if (happiness >= CITIZEN_HAPPINESS_THRESHOLD && hasMarket && this.population.tier === 1 && this.population.total >= 8) {
+      this.population.tier = 2;
+    }
+  }
+
+  canResearch(techId: string): boolean {
+    if (this.researchedTechs.includes(techId)) return false;
+    if (this.researchTarget === techId) return false;
+
+    const tech = TECH_TREE.find((t) => t.id === techId);
+    if (!tech) return false;
+
+    for (const req of tech.requires) {
+      if (!this.researchedTechs.includes(req)) return false;
+    }
+
+    return true;
+  }
+
+  startResearch(techId: string): void {
+    if (!this.canResearch(techId)) return;
+    this.researchTarget = techId;
+    this.researchProgress = 0;
+  }
+
+  getTechBonuses(): { foodMultiplier: number; woodMultiplier: number; stoneMultiplier: number; goldMultiplier: number; happinessBonus: number } {
+    let food = 1, wood = 1, stone = 1, gold = 1, happy = 0;
+    for (const techId of this.researchedTechs) {
+      const tech = TECH_TREE.find((t) => t.id === techId);
+      if (!tech) continue;
+      if (tech.bonuses.foodMultiplier) food += tech.bonuses.foodMultiplier;
+      if (tech.bonuses.woodMultiplier) wood += tech.bonuses.woodMultiplier;
+      if (tech.bonuses.stoneMultiplier) stone += tech.bonuses.stoneMultiplier;
+      if (tech.bonuses.goldMultiplier) gold += tech.bonuses.goldMultiplier;
+      if (tech.bonuses.happinessBonus) happy += tech.bonuses.happinessBonus;
+    }
+    return { foodMultiplier: food, woodMultiplier: wood, stoneMultiplier: stone, goldMultiplier: gold, happinessBonus: happy };
+  }
+
+  hasWalls(): boolean {
+    return this.buildings.some((b) => b.type === BuildingType.Wall);
   }
 
   canTrade(resource: ResourceType, amount: number, direction: "buy" | "sell"): boolean {
-    if (resource === ResourceType.Gold) return false;
+    if (resource === ResourceType.Gold || resource === ResourceType.Research) return false;
     const price = TRADE_PRICES[resource];
     if (!price) return false;
 
@@ -249,9 +309,5 @@ export class GameState {
     }
 
     return messages;
-  }
-
-  getBuildingDef(type: BuildingType) {
-    return BUILDINGS[type] ?? null;
   }
 }

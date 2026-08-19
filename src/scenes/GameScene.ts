@@ -3,22 +3,26 @@ import { GameState } from "../state/GameState";
 import { TileMap } from "../map/TileMap";
 import { HUD } from "../ui/HUD";
 import { BuildPanel } from "../ui/BuildPanel";
+import { TechPanel } from "../ui/TechPanel";
 import { ProductionSystem } from "../systems/ProductionSystem";
 import { PopulationSystem } from "../systems/PopulationSystem";
 import { SeasonSystem } from "../systems/SeasonSystem";
 import { EventSystem } from "../systems/EventSystem";
+import { TechSystem } from "../systems/TechSystem";
 import { BuildingType } from "../types";
-import { TILE_SIZE, GRID_COLS, GRID_ROWS, TICK_RATE_MS, BUILDINGS } from "../config";
+import { TILE_SIZE, GRID_COLS, GRID_ROWS, TICK_RATE_MS, BUILDINGS, VICTORY_POPULATION, VICTORY_TECHS } from "../config";
 
 export class GameScene extends Phaser.Scene {
   state!: GameState;
   tileMap!: TileMap;
   hud!: HUD;
   buildPanel!: BuildPanel;
+  techPanel!: TechPanel;
   prodSystem!: ProductionSystem;
   popSystem!: PopulationSystem;
   seasonSystem!: SeasonSystem;
   eventSystem!: EventSystem;
+  techSystem!: TechSystem;
 
   lastTick: number = 0;
   selectedBuildType: BuildingType | null = null;
@@ -36,10 +40,13 @@ export class GameScene extends Phaser.Scene {
     this.popSystem = new PopulationSystem();
     this.seasonSystem = new SeasonSystem();
     this.eventSystem = new EventSystem();
+    this.techSystem = new TechSystem();
+    this.techPanel = new TechPanel(this);
 
     this.buildPanel = new BuildPanel(this, (type) => {
       this.selectedBuildType = type;
     });
+    this.buildPanel.rebuild(this.state);
 
     this.tileMap.sync(this.state);
 
@@ -66,6 +73,7 @@ export class GameScene extends Phaser.Scene {
       this.buildPanel.deselect();
       this.tileMap.clearPreview();
       this.hud.hideTrade();
+      this.techPanel.hide();
     });
 
     this.input.keyboard?.on("keydown-SPACE", () => {
@@ -73,7 +81,13 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.input.keyboard?.on("keydown-T", () => {
+      this.techPanel.hide();
       this.hud.toggleTrade(this.state);
+    });
+
+    this.input.keyboard?.on("keydown-R", () => {
+      this.hud.hideTrade();
+      this.techPanel.toggle(this.state);
     });
 
     this.input.keyboard?.on("keydown-ONE", () => this.selectBuild(BuildingType.House));
@@ -173,7 +187,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, _delta: number): void {
-    if (this.state.gameOver) return;
+    if (this.state.gameOver || this.state.victory) return;
 
     const tickInterval = TICK_RATE_MS / this.state.gameSpeed;
     if (this.time.now - this.lastTick >= tickInterval) {
@@ -182,6 +196,7 @@ export class GameScene extends Phaser.Scene {
       this.seasonSystem.update(this.state);
       this.eventSystem.update(this.state);
       this.prodSystem.update(this.state);
+      this.techSystem.update(this.state);
       this.popSystem.update(this.state);
 
       this.state.totalTicks++;
@@ -190,8 +205,16 @@ export class GameScene extends Phaser.Scene {
         this.state.gameOver = true;
       }
 
+      if (this.state.population.total >= VICTORY_POPULATION && this.state.researchedTechs.length >= VICTORY_TECHS) {
+        this.state.victory = true;
+      }
+
       this.tileMap.sync(this.state);
       this.hud.update(this.state);
+
+      if (this.techPanel.visible) {
+        this.techPanel.show(this.state);
+      }
 
       const seasonBgs: Record<string, number> = {
         spring: 0x1a2a1e,
