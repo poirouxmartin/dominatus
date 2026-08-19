@@ -6,6 +6,8 @@ export enum ResourceType {
   Planks = "planks",
   Bricks = "bricks",
   Research = "research",
+  Leather = "leather",
+  Tools = "tools",
 }
 
 export enum TileType {
@@ -31,6 +33,11 @@ export enum BuildingType {
   Inn = "inn",
   Academy = "academy",
   Wall = "wall",
+  Tannery = "tannery",
+  Forge = "forge",
+  Tavern = "tavern",
+  Tower = "tower",
+  Chapel = "chapel",
 }
 
 export enum Season {
@@ -45,6 +52,7 @@ export enum EventType {
   Caravan = "caravan",
   Festival = "festival",
   Plague = "plague",
+  Raid = "raid",
 }
 
 export enum TechBranch {
@@ -52,6 +60,7 @@ export enum TechBranch {
   Industry = "industry",
   Commerce = "commerce",
   Civic = "civic",
+  Military = "military",
 }
 
 export interface TechDef {
@@ -69,6 +78,7 @@ export interface TechDef {
     goldMultiplier: number;
     happinessBonus: number;
     storageBonus: number;
+    raidDefense: number;
   }>;
 }
 
@@ -87,6 +97,8 @@ export interface Resources {
   [ResourceType.Planks]: number;
   [ResourceType.Bricks]: number;
   [ResourceType.Research]: number;
+  [ResourceType.Leather]: number;
+  [ResourceType.Tools]: number;
 }
 
 export interface ProductionDef {
@@ -137,4 +149,21 @@ export interface TradeOffer {
   resource: ResourceType;
   buyPrice: number;
   sellPrice: number;
+}
+
+export interface SaveData {
+  resources: Resources;
+  tiles: Tile[][];
+  buildings: PlacedBuilding[];
+  nextBuildingId: number;
+  season: Season;
+  seasonTick: number;
+  totalTicks: number;
+  population: PopulationStats;
+  storageCapacity: number;
+  gameOver: boolean;
+  victory: boolean;
+  researchedTechs: string[];
+  researchTarget: string | null;
+  researchProgress: number;
 }

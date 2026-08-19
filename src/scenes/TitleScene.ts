@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { GameState } from "../state/GameState";
 
 export class TitleScene extends Phaser.Scene {
   particles!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -65,12 +66,15 @@ export class TitleScene extends Phaser.Scene {
     subtitle.setAlpha(0);
     this.tweens.add({ targets: subtitle, alpha: 1, duration: 1500, delay: 500 });
 
-    const startText = this.add.text(width / 2, height / 2 + 100, "[ Click to Begin ]", {
+    const hasSave = GameState.hasSave();
+
+    const startText = this.add.text(width / 2, height / 2 + 90, hasSave ? "[ New Game ]" : "[ Click to Begin ]", {
       fontSize: "14px",
       fontFamily: "'Courier New', monospace",
       color: "#888888",
     });
     startText.setOrigin(0.5);
+    startText.setInteractive({ useHandCursor: true });
     this.tweens.add({
       targets: startText,
       alpha: { from: 0.4, to: 1 },
@@ -79,26 +83,46 @@ export class TitleScene extends Phaser.Scene {
       repeat: -1,
     });
 
-    const version = this.add.text(width - 16, height - 16, "v0.2.0 — Prototype", {
+    startText.on("pointerdown", () => {
+      GameState.deleteSave();
+      this.cameras.main.fadeOut(600, 15, 15, 30);
+      this.time.delayedCall(600, () => {
+        this.scene.start("GameScene");
+      });
+    });
+
+    if (hasSave) {
+      const loadText = this.add.text(width / 2, height / 2 + 120, "[ Load Game ]", {
+        fontSize: "14px",
+        fontFamily: "'Courier New', monospace",
+        color: "#c9a84c",
+      });
+      loadText.setOrigin(0.5);
+      loadText.setInteractive({ useHandCursor: true });
+      loadText.setAlpha(0);
+      this.tweens.add({ targets: loadText, alpha: 1, duration: 1000, delay: 800 });
+
+      loadText.on("pointerdown", () => {
+        this.cameras.main.fadeOut(600, 15, 15, 30);
+        this.time.delayedCall(600, () => {
+          this.scene.start("GameScene");
+        });
+      });
+    }
+
+    const version = this.add.text(width - 16, height - 16, "v0.3.0 — Prototype", {
       fontSize: "10px",
       fontFamily: "'Courier New', monospace",
       color: "#444444",
     });
     version.setOrigin(1, 1);
 
-    const controls = this.add.text(width / 2, height - 40, "1-9: Build  |  Right-click: Demolish  |  T: Trade  |  Space: Speed  |  Scroll: Zoom", {
+    const controls = this.add.text(width / 2, height - 40, "1-9: Build  |  RMB: Demolish  |  T: Trade  |  R: Research  |  F5: Save  |  F9: Load", {
       fontSize: "10px",
       fontFamily: "'Courier New', monospace",
       color: "#555555",
     });
     controls.setOrigin(0.5);
-
-    this.input.once("pointerdown", () => {
-      this.cameras.main.fadeOut(600, 15, 15, 30);
-      this.time.delayedCall(600, () => {
-        this.scene.start("GameScene");
-      });
-    });
 
     this.cameras.main.fadeIn(800, 15, 15, 30);
   }

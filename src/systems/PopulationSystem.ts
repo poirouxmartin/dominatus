@@ -22,6 +22,9 @@ export class PopulationSystem {
     let gardenCount = 0;
     let innCount = 0;
     let wallCount = 0;
+    let towerCount = 0;
+    let chapelCount = 0;
+    let tavernCount = 0;
 
     for (const b of state.buildings) {
       const def = BUILDINGS[b.type];
@@ -30,6 +33,9 @@ export class PopulationSystem {
       if (b.type === BuildingType.Garden) gardenCount++;
       if (b.type === BuildingType.Inn) innCount++;
       if (b.type === BuildingType.Wall) wallCount++;
+      if (b.type === BuildingType.Tower) towerCount++;
+      if (b.type === BuildingType.Chapel) chapelCount++;
+      if (b.type === BuildingType.Tavern) tavernCount++;
     }
 
     const foodMultiplier = state.population.tier >= 2 ? CITIZEN_FOOD_MULTIPLIER : 1;
@@ -53,13 +59,16 @@ export class PopulationSystem {
     happiness += gardenCount * 10;
     happiness += innCount * 15;
     happiness += wallCount * 5;
+    happiness += towerCount * 5;
+    happiness += chapelCount * 25;
+    happiness += tavernCount * 20;
 
     if (state.population.total > 0 && state.population.total >= capacity) {
       happiness -= 10;
     }
 
     const hasTradingPost = state.buildings.some(
-      (b) => b.type === BuildingType.TradingPost || b.type === BuildingType.Inn
+      (b) => b.type === BuildingType.TradingPost || b.type === BuildingType.Inn || b.type === BuildingType.Tavern
     );
     if (hasTradingPost) happiness += 5;
 
@@ -79,7 +88,7 @@ export class PopulationSystem {
       state.population.total = Math.floor(state.population.total * 10) / 10;
     }
 
-    const hasMarket = state.buildings.some((b) => b.type === BuildingType.Market || b.type === BuildingType.Inn);
+    const hasMarket = state.buildings.some((b) => b.type === BuildingType.Market || b.type === BuildingType.Inn || b.type === BuildingType.Tavern);
     if (happiness >= CITIZEN_HAPPINESS_THRESHOLD && hasMarket && state.population.tier === 1 && state.population.total >= 8) {
       state.population.tier = 2;
     }

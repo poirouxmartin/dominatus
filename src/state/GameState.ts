@@ -9,6 +9,7 @@ import {
   PopulationStats,
   GameEvent,
   EventType,
+  SaveData,
 } from "../types";
 import {
   GRID_COLS,
@@ -20,6 +21,10 @@ import {
   TRADE_PRICES,
   TECH_TREE,
   CITIZEN_HAPPINESS_THRESHOLD,
+  RAID_BASE_DAMAGE,
+  RAID_WALL_REDUCTION,
+  RAID_TOWER_REDUCTION,
+  SAVE_KEY,
 } from "../config";
 
 export class GameState {
@@ -41,26 +46,45 @@ export class GameState {
   researchTarget: string | null;
   researchProgress: number;
 
-  constructor() {
-    this.resources = { ...STARTING_RESOURCES };
-    this.tiles = [];
-    this.buildings = [];
-    this.nextBuildingId = 1;
-    this.season = Season.Spring;
-    this.seasonTick = 0;
-    this.totalTicks = 0;
-    this.population = { total: 0, happiness: 50, foodConsumption: 0, tier: 1 };
-    this.storageCapacity = STORAGE_BASE;
-    this.gameOver = false;
-    this.victory = false;
-    this.gameSpeed = 1;
-    this.activeEvents = [];
-    this.lastEventTick = 0;
-    this.researchedTechs = [];
-    this.researchTarget = null;
-    this.researchProgress = 0;
-
-    this.generateMap();
+  constructor(saved?: SaveData) {
+    if (saved) {
+      this.resources = { ...saved.resources };
+      this.tiles = saved.tiles.map((row) => row.map((t) => ({ ...t })));
+      this.buildings = saved.buildings.map((b) => ({ ...b }));
+      this.nextBuildingId = saved.nextBuildingId;
+      this.season = saved.season;
+      this.seasonTick = saved.seasonTick;
+      this.totalTicks = saved.totalTicks;
+      this.population = { ...saved.population };
+      this.storageCapacity = saved.storageCapacity;
+      this.gameOver = saved.gameOver;
+      this.victory = saved.victory;
+      this.gameSpeed = 1;
+      this.activeEvents = [];
+      this.lastEventTick = saved.totalTicks;
+      this.researchedTechs = [...saved.researchedTechs];
+      this.researchTarget = saved.researchTarget;
+      this.researchProgress = saved.researchProgress;
+    } else {
+      this.resources = { ...STARTING_RESOURCES };
+      this.tiles = [];
+      this.buildings = [];
+      this.nextBuildingId = 1;
+      this.season = Season.Spring;
+      this.seasonTick = 0;
+      this.totalTicks = 0;
+      this.population = { total: 0, happiness: 50, foodConsumption: 0, tier: 1 };
+      this.storageCapacity = STORAGE_BASE;
+      this.gameOver = false;
+      this.victory = false;
+      this.gameSpeed = 1;
+      this.activeEvents = [];
+      this.lastEventTick = 0;
+      this.researchedTechs = [];
+      this.researchTarget = null;
+      this.researchProgress = 0;
+      this.generateMap();
+    }
   }
 
   private generateMap(): void {
@@ -215,7 +239,7 @@ export class GameState {
     }
 
     const happiness = this.population.happiness;
-    const hasMarket = this.buildings.some((b) => b.type === BuildingType.Market || b.type === BuildingType.Inn);
+    const hasMarket = this.buildings.some((b) => b.type === BuildingType.Market || b.type === BuildingType.Inn || b.type === BuildingType.Tavern);
     if (happiness >= CITIZEN_HAPPINESS_THRESHOLD && hasMarket && this.population.tier === 1 && this.population.total >= 8) {
       this.population.tier = 2;
     }
@@ -241,8 +265,8 @@ export class GameState {
     this.researchProgress = 0;
   }
 
-  getTechBonuses(): { foodMultiplier: number; woodMultiplier: number; stoneMultiplier: number; goldMultiplier: number; happinessBonus: number } {
-    let food = 1, wood = 1, stone = 1, gold = 1, happy = 0;
+  getTechBonuses(): { foodMultiplier: number; woodMultiplier: number; stoneMultiplier: number; goldMultiplier: number; happinessBonus: number; raidDefense: number } {
+    let food = 1, wood = 1, stone = 1, gold = 1, happy = 0, raidDef = 0;
     for (const techId of this.researchedTechs) {
       const tech = TECH_TREE.find((t) => t.id === techId);
       if (!tech) continue;
@@ -251,12 +275,26 @@ export class GameState {
       if (tech.bonuses.stoneMultiplier) stone += tech.bonuses.stoneMultiplier;
       if (tech.bonuses.goldMultiplier) gold += tech.bonuses.goldMultiplier;
       if (tech.bonuses.happinessBonus) happy += tech.bonuses.happinessBonus;
+      if (tech.bonuses.raidDefense) raidDef += tech.bonuses.raidDefense;
     }
-    return { foodMultiplier: food, woodMultiplier: wood, stoneMultiplier: stone, goldMultiplier: gold, happinessBonus: happy };
+    return { foodMultiplier: food, woodMultiplier: wood, stoneMultiplier: stone, goldMultiplier: gold, happinessBonus: happy, raidDefense: raidDef };
   }
 
   hasWalls(): boolean {
     return this.buildings.some((b) => b.type === BuildingType.Wall);
+  }
+
+  countTowers(): number {
+    return this.buildings.filter((b) => b.type === BuildingType.Tower).length;
+  }
+
+  getRaidDefense(): number {
+    const bonuses = this.getTechBonuses();
+    let defense = bonuses.raidDefense;
+    const wallCount = this.buildings.filter((b) => b.type === BuildingType.Wall).length;
+    defense += wallCount * RAID_WALL_REDUCTION;
+    defense += this.countTowers() * RAID_TOWER_REDUCTION;
+    return Math.min(defense, 0.9);
   }
 
   canTrade(resource: ResourceType, amount: number, direction: "buy" | "sell"): boolean {
@@ -309,5 +347,52 @@ export class GameState {
     }
 
     return messages;
+  }
+
+  toSaveData(): SaveData {
+    return {
+      resources: { ...this.resources },
+      tiles: this.tiles.map((row) => row.map((t) => ({ ...t }))),
+      buildings: this.buildings.map((b) => ({ ...b })),
+      nextBuildingId: this.nextBuildingId,
+      season: this.season,
+      seasonTick: this.seasonTick,
+      totalTicks: this.totalTicks,
+      population: { ...this.population },
+      storageCapacity: this.storageCapacity,
+      gameOver: this.gameOver,
+      victory: this.victory,
+      researchedTechs: [...this.researchedTechs],
+      researchTarget: this.researchTarget,
+      researchProgress: this.researchProgress,
+    };
+  }
+
+  save(): void {
+    try {
+      const data = this.toSaveData();
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn("Save failed:", e);
+    }
+  }
+
+  static hasSave(): boolean {
+    return localStorage.getItem(SAVE_KEY) !== null;
+  }
+
+  static loadSave(): SaveData | null {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw) as SaveData;
+    } catch (e) {
+      console.warn("Load failed:", e);
+      return null;
+    }
+  }
+
+  static deleteSave(): void {
+    localStorage.removeItem(SAVE_KEY);
   }
 }

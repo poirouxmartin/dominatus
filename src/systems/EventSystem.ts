@@ -1,6 +1,6 @@
 import { GameState } from "../state/GameState";
 import { EventType, GameEvent, ResourceType } from "../types";
-import { EVENT_CHECK_INTERVAL, EVENT_CHANCE } from "../config";
+import { EVENT_CHECK_INTERVAL, EVENT_CHANCE, RAID_MIN_POP, RAID_BASE_DAMAGE } from "../config";
 
 export class EventSystem {
   update(state: GameState): void {
@@ -10,14 +10,16 @@ export class EventSystem {
     if (Math.random() > EVENT_CHANCE) return;
 
     const roll = Math.random();
-    if (roll < 0.3) {
+    if (roll < 0.22) {
       this.triggerStorm(state);
-    } else if (roll < 0.6) {
+    } else if (roll < 0.44) {
       this.triggerCaravan(state);
-    } else if (roll < 0.85) {
+    } else if (roll < 0.66) {
       this.triggerFestival(state);
-    } else {
+    } else if (roll < 0.84) {
       this.triggerPlague(state);
+    } else {
+      this.triggerRaid(state);
     }
   }
 
@@ -88,6 +90,34 @@ export class EventSystem {
       effect: (s: GameState) => {
         s.population.happiness = Math.max(0, s.population.happiness - 25);
         s.population.total = Math.max(0, s.population.total - Math.floor(s.population.total * 0.15));
+      },
+    });
+  }
+
+  private triggerRaid(state: GameState): void {
+    if (state.population.total < RAID_MIN_POP) return;
+
+    const pop = Math.floor(state.population.total);
+    const rawDamage = RAID_BASE_DAMAGE;
+    const defense = state.getRaidDefense();
+    const actualDamage = Math.max(0.02, rawDamage - defense);
+    const loss = Math.max(1, Math.floor(pop * actualDamage));
+
+    state.addEvent({
+      type: EventType.Raid,
+      message: `Raiders attack! ${loss} people lost! (defense: ${Math.floor(defense * 100)}%)`,
+      tickRemaining: 2,
+      effect: (s: GameState) => {
+        s.population.total = Math.max(0, s.population.total - loss);
+        s.population.happiness = Math.max(0, s.population.happiness - 15);
+
+        const lootRes = [ResourceType.Wood, ResourceType.Food, ResourceType.Gold][
+          Math.floor(Math.random() * 3)
+        ];
+        const lootAmt = Math.floor(Math.random() * 20) + 5;
+        if (s.resources[lootRes] > lootAmt) {
+          s.resources[lootRes] -= lootAmt;
+        }
       },
     });
   }

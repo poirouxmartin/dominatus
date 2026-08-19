@@ -16,6 +16,8 @@ export const STARTING_RESOURCES: Record<ResourceType, number> = {
   [ResourceType.Planks]: 0,
   [ResourceType.Bricks]: 0,
   [ResourceType.Research]: 0,
+  [ResourceType.Leather]: 0,
+  [ResourceType.Tools]: 0,
 };
 
 export const STORAGE_BASE = 200;
@@ -85,6 +87,16 @@ export const TECH_TREE: TechDef[] = [
     unlocks: [BuildingType.Wall],
     bonuses: { storageBonus: 200 },
   },
+  {
+    id: "metallurgy",
+    name: "Metallurgy",
+    description: "Metalworking. Unlocks Forge, +25% stone.",
+    branch: TechBranch.Industry,
+    cost: 50,
+    requires: ["engineering"],
+    unlocks: [BuildingType.Forge],
+    bonuses: { stoneMultiplier: 0.25 },
+  },
 
   // Commerce branch
   {
@@ -149,6 +161,48 @@ export const TECH_TREE: TechDef[] = [
     unlocks: [],
     bonuses: { happinessBonus: 25 },
   },
+  {
+    id: "theology",
+    name: "Theology",
+    description: "Faith and devotion. Unlocks Chapel.",
+    branch: TechBranch.Civic,
+    cost: 35,
+    requires: ["law"],
+    unlocks: [BuildingType.Chapel],
+    bonuses: {},
+  },
+
+  // Military branch
+  {
+    id: "militia",
+    name: "Militia",
+    description: "Citizen soldiers. +10% raid defense.",
+    branch: TechBranch.Military,
+    cost: 25,
+    requires: [],
+    unlocks: [BuildingType.Tower],
+    bonuses: { raidDefense: 0.1 },
+  },
+  {
+    id: "fortification",
+    name: "Fortification",
+    description: "Stronger walls. Walls block 80% of raid damage.",
+    branch: TechBranch.Military,
+    cost: 50,
+    requires: ["militia"],
+    unlocks: [],
+    bonuses: { raidDefense: 0.3 },
+  },
+  {
+    id: "conscription",
+    name: "Conscription",
+    description: "Mass mobilization. +20% raid defense.",
+    branch: TechBranch.Military,
+    cost: 75,
+    requires: ["fortification"],
+    unlocks: [],
+    bonuses: { raidDefense: 0.2 },
+  },
 ];
 
 export const TECH_BRANCH_LABELS: Record<TechBranch, string> = {
@@ -156,6 +210,7 @@ export const TECH_BRANCH_LABELS: Record<TechBranch, string> = {
   [TechBranch.Industry]: "Industry",
   [TechBranch.Commerce]: "Commerce",
   [TechBranch.Civic]: "Civic",
+  [TechBranch.Military]: "Military",
 };
 
 export const TECH_BRANCH_COLORS: Record<TechBranch, string> = {
@@ -163,6 +218,7 @@ export const TECH_BRANCH_COLORS: Record<TechBranch, string> = {
   [TechBranch.Industry]: "#aa5533",
   [TechBranch.Commerce]: "#c9a84c",
   [TechBranch.Civic]: "#5588cc",
+  [TechBranch.Military]: "#d9534f",
 };
 
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
@@ -351,7 +407,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   [BuildingType.Academy]: {
     type: BuildingType.Academy,
     name: "Academy",
-    description: "Advanced research. +3 research per cycle.",
+    description: "Advanced research. +4 research per cycle.",
     cost: { [ResourceType.Wood]: 40, [ResourceType.Stone]: 30, [ResourceType.Planks]: 20, [ResourceType.Bricks]: 10 },
     production: {
       input: { [ResourceType.Food]: 2 },
@@ -368,7 +424,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   [BuildingType.Wall]: {
     type: BuildingType.Wall,
     name: "Wall",
-    description: "Fortification. +5 happiness, blocks storms.",
+    description: "Fortification. Blocks storms, reduces raid damage.",
     cost: { [ResourceType.Stone]: 20, [ResourceType.Bricks]: 10 },
     production: null,
     populationCapacity: 0,
@@ -377,6 +433,82 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     requiredTile: null,
     color: 0x888888,
     requiredTech: "engineering",
+  },
+  [BuildingType.Tannery]: {
+    type: BuildingType.Tannery,
+    name: "Tannery",
+    description: "Treats hides into leather. Needs food.",
+    cost: { [ResourceType.Wood]: 20, [ResourceType.Stone]: 10 },
+    production: {
+      input: { [ResourceType.Food]: 2 },
+      output: { [ResourceType.Leather]: 2 },
+      ticksPerCycle: 4,
+    },
+    populationCapacity: 0,
+    populationNeed: 2,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0x8b6914,
+  },
+  [BuildingType.Forge]: {
+    type: BuildingType.Forge,
+    name: "Forge",
+    description: "Forges tools from planks and leather.",
+    cost: { [ResourceType.Wood]: 30, [ResourceType.Stone]: 20, [ResourceType.Planks]: 15 },
+    production: {
+      input: { [ResourceType.Planks]: 1, [ResourceType.Leather]: 1 },
+      output: { [ResourceType.Tools]: 2 },
+      ticksPerCycle: 5,
+    },
+    populationCapacity: 0,
+    populationNeed: 2,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0x666666,
+    requiredTech: "metallurgy",
+  },
+  [BuildingType.Tavern]: {
+    type: BuildingType.Tavern,
+    name: "Tavern",
+    description: "Lively tavern. +20 happiness radius. Needs food+leather.",
+    cost: { [ResourceType.Wood]: 35, [ResourceType.Stone]: 15, [ResourceType.Planks]: 15, [ResourceType.Leather]: 10 },
+    production: {
+      input: { [ResourceType.Food]: 2, [ResourceType.Leather]: 1 },
+      output: { [ResourceType.Gold]: 3 },
+      ticksPerCycle: 5,
+    },
+    populationCapacity: 0,
+    populationNeed: 1,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0xaa6622,
+    requiredTech: "banking",
+  },
+  [BuildingType.Tower]: {
+    type: BuildingType.Tower,
+    name: "Tower",
+    description: "Watchtower. +10% raid defense per tower. +5 happiness.",
+    cost: { [ResourceType.Stone]: 25, [ResourceType.Bricks]: 15, [ResourceType.Tools]: 5 },
+    production: null,
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0x777799,
+    requiredTech: "militia",
+  },
+  [BuildingType.Chapel]: {
+    type: BuildingType.Chapel,
+    name: "Chapel",
+    description: "House of worship. +25 happiness radius.",
+    cost: { [ResourceType.Wood]: 30, [ResourceType.Stone]: 25, [ResourceType.Planks]: 20, [ResourceType.Bricks]: 10 },
+    production: null,
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0xddccaa,
+    requiredTech: "theology",
   },
 };
 
@@ -388,10 +520,16 @@ export const TRADE_PRICES: Record<ResourceType, { buy: number; sell: number }> =
   [ResourceType.Planks]: { buy: 10, sell: 5 },
   [ResourceType.Bricks]: { buy: 12, sell: 6 },
   [ResourceType.Research]: { buy: 999, sell: 0 },
+  [ResourceType.Leather]: { buy: 8, sell: 4 },
+  [ResourceType.Tools]: { buy: 15, sell: 7 },
 };
 
 export const EVENT_CHECK_INTERVAL = 15;
 export const EVENT_CHANCE = 0.3;
+export const RAID_MIN_POP = 10;
+export const RAID_BASE_DAMAGE = 0.15;
+export const RAID_WALL_REDUCTION = 0.15;
+export const RAID_TOWER_REDUCTION = 0.10;
 
 export const BASE_HAPPINESS = 50;
 export const FOOD_PER_PERSON = 0.5;
@@ -405,5 +543,7 @@ export const CITIZEN_HAPPINESS_THRESHOLD = 80;
 export const CITIZEN_FOOD_MULTIPLIER = 1.5;
 export const RESEARCH_PER_PERSON = 0.02;
 
-export const VICTORY_POPULATION = 30;
-export const VICTORY_TECHS = 10;
+export const VICTORY_POPULATION = 40;
+export const VICTORY_TECHS = 14;
+
+export const SAVE_KEY = "dominatus_save_v1";

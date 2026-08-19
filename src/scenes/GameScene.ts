@@ -27,13 +27,20 @@ export class GameScene extends Phaser.Scene {
   lastTick: number = 0;
   selectedBuildType: BuildingType | null = null;
   camera!: Phaser.Cameras.Scene2D.Camera;
+  autoSaveCounter: number = 0;
 
   constructor() {
     super({ key: "GameScene" });
   }
 
   create(): void {
-    this.state = new GameState();
+    const saved = GameState.loadSave();
+    if (saved) {
+      this.state = new GameState(saved);
+    } else {
+      this.state = new GameState();
+    }
+
     this.tileMap = new TileMap(this);
     this.hud = new HUD(this);
     this.prodSystem = new ProductionSystem();
@@ -88,6 +95,23 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-R", () => {
       this.hud.hideTrade();
       this.techPanel.toggle(this.state);
+    });
+
+    this.input.keyboard?.on("keydown-F5", () => {
+      this.state.save();
+      this.hud.setInfo("Game saved!", "#5cb85c");
+    });
+
+    this.input.keyboard?.on("keydown-F9", () => {
+      const saved = GameState.loadSave();
+      if (saved) {
+        this.state = new GameState(saved);
+        this.buildPanel.rebuild(this.state);
+        this.tileMap.sync(this.state);
+        this.hud.setInfo("Game loaded!", "#5cb85c");
+      } else {
+        this.hud.setInfo("No save found.", "#d9534f");
+      }
     });
 
     this.input.keyboard?.on("keydown-ONE", () => this.selectBuild(BuildingType.House));
@@ -207,6 +231,12 @@ export class GameScene extends Phaser.Scene {
 
       if (this.state.population.total >= VICTORY_POPULATION && this.state.researchedTechs.length >= VICTORY_TECHS) {
         this.state.victory = true;
+      }
+
+      this.autoSaveCounter++;
+      if (this.autoSaveCounter >= 60) {
+        this.autoSaveCounter = 0;
+        this.state.save();
       }
 
       this.tileMap.sync(this.state);

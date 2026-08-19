@@ -13,11 +13,16 @@ const ALL_BUILD_ORDER: BuildingType[] = [
   BuildingType.Warehouse,
   BuildingType.Market,
   BuildingType.TradingPost,
+  BuildingType.Tannery,
   BuildingType.ResearchLab,
   BuildingType.Garden,
   BuildingType.Inn,
+  BuildingType.Tavern,
   BuildingType.Academy,
   BuildingType.Wall,
+  BuildingType.Tower,
+  BuildingType.Forge,
+  BuildingType.Chapel,
 ];
 
 const ICONS: Record<ResourceType, string> = {
@@ -28,6 +33,8 @@ const ICONS: Record<ResourceType, string> = {
   [ResourceType.Planks]: "\u{1FAA3}",
   [ResourceType.Bricks]: "\u{1F9F1}",
   [ResourceType.Research]: "\u{1F4D6}",
+  [ResourceType.Leather]: "\u{1F9F6}",
+  [ResourceType.Tools]: "\u{1F6E0}",
 };
 
 export class BuildPanel {
@@ -62,8 +69,8 @@ export class BuildPanel {
     this.buttons = [];
     this.hideTooltip();
 
-    let xOff = 8;
-    const gap = 3;
+    let xOff = 6;
+    const gap = 2;
 
     const visibleTypes = ALL_BUILD_ORDER.filter((type) => {
       const def = BUILDINGS[type];
@@ -77,7 +84,8 @@ export class BuildPanel {
       return !state.researchedTechs.includes(def.requiredTech);
     });
 
-    const btnW = Math.min(136, Math.floor((1264 - (visibleTypes.length + lockedTypes.length) * gap) / (visibleTypes.length + lockedTypes.length)));
+    const totalBtns = visibleTypes.length + lockedTypes.length;
+    const btnW = Math.min(120, Math.floor((1268 - totalBtns * gap) / totalBtns));
 
     for (const type of visibleTypes) {
       const def = BUILDINGS[type];
@@ -86,8 +94,8 @@ export class BuildPanel {
       bg.setStrokeStyle(1, 0x333355);
       bg.setInteractive({ useHandCursor: true });
 
-      const label = this.scene.add.text(xOff + 6, 686, def.name, {
-        fontSize: "10px",
+      const label = this.scene.add.text(xOff + 4, 686, def.name, {
+        fontSize: "9px",
         fontFamily: "Arial, sans-serif",
         color: "#e8e0d0",
       });
@@ -99,8 +107,8 @@ export class BuildPanel {
           return `${ICONS[res] || ""}${a}`;
         });
 
-      const cost = this.scene.add.text(xOff + 6, 700, costParts.join(" "), {
-        fontSize: "9px",
+      const cost = this.scene.add.text(xOff + 4, 700, costParts.join(" "), {
+        fontSize: "8px",
         fontFamily: "'Courier New', monospace",
         color: "#888888",
       });
@@ -132,8 +140,8 @@ export class BuildPanel {
       const bg = this.scene.add.rectangle(xOff + btnW / 2, 695, btnW, 42, 0x1a1a1a, 0.6);
       bg.setStrokeStyle(1, 0x222222);
 
-      const label = this.scene.add.text(xOff + 6, 686, `\u{1F512} ${def.name}`, {
-        fontSize: "10px",
+      const label = this.scene.add.text(xOff + 4, 686, `\u{1F512} ${def.name}`, {
+        fontSize: "9px",
         fontFamily: "Arial, sans-serif",
         color: "#444444",
       });
@@ -150,7 +158,7 @@ export class BuildPanel {
 
     this.tooltip = this.scene.add.container(0, 0);
 
-    const bg = this.scene.add.rectangle(x, y - 20, 240, 40, 0x0f0f1e, 0.95);
+    const bg = this.scene.add.rectangle(x, y - 20, 260, 40, 0x0f0f1e, 0.95);
     bg.setStrokeStyle(1, 0xc9a84c, 0.5);
     this.tooltip.add(bg);
 
@@ -158,7 +166,7 @@ export class BuildPanel {
       fontSize: "10px",
       fontFamily: "Arial, sans-serif",
       color: "#b0a890",
-      wordWrap: { width: 220 },
+      wordWrap: { width: 240 },
     });
     desc.setOrigin(0.5);
     this.tooltip.add(desc);

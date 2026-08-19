@@ -25,6 +25,8 @@ const RES_ICONS: Record<ResourceType, string> = {
   [ResourceType.Planks]: "\u{1FAA3}",
   [ResourceType.Bricks]: "\u{1F9F1}",
   [ResourceType.Research]: "\u{1F4D6}",
+  [ResourceType.Leather]: "\u{1F9F6}",
+  [ResourceType.Tools]: "\u{1F6E0}",
 };
 
 const RES_ORDER: ResourceType[] = [
@@ -35,6 +37,8 @@ const RES_ORDER: ResourceType[] = [
   ResourceType.Planks,
   ResourceType.Bricks,
   ResourceType.Research,
+  ResourceType.Leather,
+  ResourceType.Tools,
 ];
 
 export class HUD {
@@ -48,6 +52,7 @@ export class HUD {
   speedText: Phaser.GameObjects.Text;
   infoText: Phaser.GameObjects.Text;
   researchInfoText: Phaser.GameObjects.Text;
+  defenseText: Phaser.GameObjects.Text;
   eventTexts: Phaser.GameObjects.Text[];
   tradePanel: Phaser.GameObjects.Container | null = null;
   tradeVisible: boolean = false;
@@ -61,17 +66,17 @@ export class HUD {
     bg.setStrokeStyle(1, 0xc9a84c, 0.3);
     this.container.add(bg);
 
-    let xOff = 12;
+    let xOff = 8;
     for (const res of RES_ORDER) {
-      const icon = scene.add.text(xOff, 11, RES_ICONS[res], { fontSize: "15px" });
-      const txt = scene.add.text(xOff + 20, 13, "0", {
-        fontSize: "13px",
+      const icon = scene.add.text(xOff, 11, RES_ICONS[res], { fontSize: "14px" });
+      const txt = scene.add.text(xOff + 18, 13, "0", {
+        fontSize: "12px",
         fontFamily: "'Courier New', monospace",
         color: "#e8e0d0",
       });
       this.resourceTexts[res] = txt;
       this.container.add([icon, txt]);
-      xOff += 68;
+      xOff += 58;
     }
 
     const sep = scene.add.rectangle(xOff + 4, 22, 1, 28, 0xc9a84c, 0.3);
@@ -79,35 +84,42 @@ export class HUD {
     xOff += 14;
 
     this.seasonText = scene.add.text(xOff, 13, "", {
-      fontSize: "13px",
+      fontSize: "12px",
       fontFamily: "'Courier New', monospace",
       color: "#ffffff",
     });
     this.container.add(this.seasonText);
 
-    this.popText = scene.add.text(xOff + 120, 13, "", {
-      fontSize: "13px",
+    this.popText = scene.add.text(xOff + 110, 13, "", {
+      fontSize: "12px",
       fontFamily: "'Courier New', monospace",
       color: "#e8e0d0",
     });
     this.container.add(this.popText);
 
-    this.tierText = scene.add.text(xOff + 210, 13, "", {
-      fontSize: "11px",
+    this.tierText = scene.add.text(xOff + 200, 13, "", {
+      fontSize: "10px",
       fontFamily: "'Courier New', monospace",
       color: "#c9a84c",
     });
     this.container.add(this.tierText);
 
-    this.happinessText = scene.add.text(xOff + 270, 13, "", {
-      fontSize: "13px",
+    this.happinessText = scene.add.text(xOff + 260, 13, "", {
+      fontSize: "12px",
       fontFamily: "'Courier New', monospace",
       color: "#e8e0d0",
     });
     this.container.add(this.happinessText);
 
+    this.defenseText = scene.add.text(xOff + 350, 13, "", {
+      fontSize: "10px",
+      fontFamily: "'Courier New', monospace",
+      color: "#d9534f",
+    });
+    this.container.add(this.defenseText);
+
     this.speedText = scene.add.text(1230, 13, "\u25B6 1x", {
-      fontSize: "13px",
+      fontSize: "12px",
       fontFamily: "'Courier New', monospace",
       color: "#c9a84c",
     });
@@ -155,6 +167,13 @@ export class HUD {
     const happyColor = happy >= 70 ? "#6bba5c" : happy >= 40 ? "#f0c05e" : "#d9534f";
     this.happinessText.setText(`\u2665 ${happy}%`);
     this.happinessText.setColor(happyColor);
+
+    const defense = state.getRaidDefense();
+    if (defense > 0) {
+      this.defenseText.setText(`\u{1F6E1} ${Math.floor(defense * 100)}%`);
+    } else {
+      this.defenseText.setText("");
+    }
 
     const speedLabels = ["\u25B6 1x", "\u25B6\u25B6 2x", "\u25B6\u25B6\u25B6 3x"];
     this.speedText.setText(speedLabels[state.gameSpeed - 1] || "\u25B6 1x");
@@ -227,11 +246,11 @@ export class HUD {
     overlay.setInteractive();
     this.tradePanel.add(overlay);
 
-    const panelBg = this.scene.add.rectangle(640, 360, 420, 340, 0x1a1a2e, 0.97);
+    const panelBg = this.scene.add.rectangle(640, 360, 420, 420, 0x1a1a2e, 0.97);
     panelBg.setStrokeStyle(2, 0xc9a84c, 0.8);
     this.tradePanel.add(panelBg);
 
-    const title = this.scene.add.text(640, 210, "\u{1F3EA} Trading Post", {
+    const title = this.scene.add.text(640, 175, "\u{1F3EA} Trading Post", {
       fontSize: "18px",
       fontFamily: "Georgia, serif",
       color: "#c9a84c",
@@ -239,7 +258,7 @@ export class HUD {
     title.setOrigin(0.5);
     this.tradePanel.add(title);
 
-    const goldLabel = this.scene.add.text(640, 238, `\u{1F4B0} ${Math.floor(state.resources[ResourceType.Gold])} gold`, {
+    const goldLabel = this.scene.add.text(640, 203, `\u{1F4B0} ${Math.floor(state.resources[ResourceType.Gold])} gold`, {
       fontSize: "12px",
       fontFamily: "'Courier New', monospace",
       color: "#c9a84c",
@@ -247,47 +266,49 @@ export class HUD {
     goldLabel.setOrigin(0.5);
     this.tradePanel.add(goldLabel);
 
-    let yOff = 268;
+    let yOff = 228;
     const tradeable = [
       ResourceType.Wood,
       ResourceType.Food,
       ResourceType.Stone,
       ResourceType.Planks,
       ResourceType.Bricks,
+      ResourceType.Leather,
+      ResourceType.Tools,
     ];
 
     for (const res of tradeable) {
       const prices = TRADE_PRICES[res];
-      const icon = this.scene.add.text(440, yOff, RES_ICONS[res], { fontSize: "14px" });
+      const icon = this.scene.add.text(440, yOff, RES_ICONS[res], { fontSize: "13px" });
       const name = this.scene.add.text(462, yOff + 1, res, {
-        fontSize: "12px",
+        fontSize: "11px",
         fontFamily: "'Courier New', monospace",
         color: "#e8e0d0",
       });
-      const owned = this.scene.add.text(540, yOff + 1, `${Math.floor(state.resources[res])}`, {
-        fontSize: "12px",
+      const owned = this.scene.add.text(535, yOff + 1, `${Math.floor(state.resources[res])}`, {
+        fontSize: "11px",
         fontFamily: "'Courier New', monospace",
         color: "#b0a890",
       });
 
-      const buyBtn = this.scene.add.text(590, yOff, `+5 (${prices.buy}g)`, {
-        fontSize: "11px",
+      const buyBtn = this.scene.add.text(585, yOff, `+5 (${prices.buy}g)`, {
+        fontSize: "10px",
         fontFamily: "'Courier New', monospace",
         color: "#6bba5c",
         backgroundColor: "#1a2a1a",
-        padding: { x: 6, y: 3 },
+        padding: { x: 5, y: 2 },
       });
       buyBtn.setInteractive({ useHandCursor: true });
       buyBtn.on("pointerdown", () => state.trade(res, 5, "buy"));
       buyBtn.on("pointerover", () => buyBtn.setBackgroundColor("#2a3a2a"));
       buyBtn.on("pointerout", () => buyBtn.setBackgroundColor("#1a1a1a"));
 
-      const sellBtn = this.scene.add.text(670, yOff, `-5 (${prices.sell}g)`, {
-        fontSize: "11px",
+      const sellBtn = this.scene.add.text(675, yOff, `-5 (${prices.sell}g)`, {
+        fontSize: "10px",
         fontFamily: "'Courier New', monospace",
         color: "#d9534f",
         backgroundColor: "#2a1a1a",
-        padding: { x: 6, y: 3 },
+        padding: { x: 5, y: 2 },
       });
       sellBtn.setInteractive({ useHandCursor: true });
       sellBtn.on("pointerdown", () => state.trade(res, 5, "sell"));
@@ -295,10 +316,10 @@ export class HUD {
       sellBtn.on("pointerout", () => sellBtn.setBackgroundColor("#2a1a1a"));
 
       this.tradePanel.add([icon, name, owned, buyBtn, sellBtn]);
-      yOff += 30;
+      yOff += 26;
     }
 
-    const closeBtn = this.scene.add.text(640, yOff + 15, "[ Close  \u232B ]", {
+    const closeBtn = this.scene.add.text(640, yOff + 12, "[ Close  \u232B ]", {
       fontSize: "12px",
       fontFamily: "'Courier New', monospace",
       color: "#888888",
