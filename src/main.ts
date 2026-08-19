@@ -9,9 +9,15 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 720,
   backgroundColor: "#0f0f1e",
   scene: [TitleScene, GameScene],
+  antialias: true,
+  pixelArt: false,
+  roundPixels: false,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
+  input: {
+    activePointers: 2,
   },
 };
 

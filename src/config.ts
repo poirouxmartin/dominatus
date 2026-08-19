@@ -18,6 +18,7 @@ export const STARTING_RESOURCES: Record<ResourceType, number> = {
   [ResourceType.Research]: 0,
   [ResourceType.Leather]: 0,
   [ResourceType.Tools]: 0,
+  [ResourceType.Water]: 0,
 };
 
 export const STORAGE_BASE = 200;
@@ -510,6 +511,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     color: 0xddccaa,
     requiredTech: "theology",
   },
+  [BuildingType.Well]: {
+    type: BuildingType.Well,
+    name: "Well",
+    description: "Draws fresh water. Produces water, reduces heat in summer.",
+    cost: { [ResourceType.Wood]: 10, [ResourceType.Stone]: 15 },
+    production: {
+      input: {},
+      output: { [ResourceType.Water]: 3 },
+      ticksPerCycle: 3,
+      winterMultiplier: 0.3,
+    },
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    color: 0x4488cc,
+  },
 };
 
 export const TRADE_PRICES: Record<ResourceType, { buy: number; sell: number }> = {
@@ -522,6 +540,7 @@ export const TRADE_PRICES: Record<ResourceType, { buy: number; sell: number }> =
   [ResourceType.Research]: { buy: 999, sell: 0 },
   [ResourceType.Leather]: { buy: 8, sell: 4 },
   [ResourceType.Tools]: { buy: 15, sell: 7 },
+  [ResourceType.Water]: { buy: 3, sell: 1 },
 };
 
 export const EVENT_CHECK_INTERVAL = 15;

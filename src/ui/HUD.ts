@@ -20,6 +20,7 @@ const SEASON_LABELS: Record<string, string> = {
 const RES_ICONS: Record<ResourceType, string> = {
   [ResourceType.Wood]: "\u{1FAB5}",
   [ResourceType.Food]: "\u{1F33E}",
+  [ResourceType.Water]: "\u{1F4A7}",
   [ResourceType.Stone]: "\u{1FAA8}",
   [ResourceType.Gold]: "\u{1F4B0}",
   [ResourceType.Planks]: "\u{1FAA3}",
@@ -32,6 +33,7 @@ const RES_ICONS: Record<ResourceType, string> = {
 const RES_ORDER: ResourceType[] = [
   ResourceType.Wood,
   ResourceType.Food,
+  ResourceType.Water,
   ResourceType.Stone,
   ResourceType.Gold,
   ResourceType.Planks,
@@ -270,6 +272,7 @@ export class HUD {
     const tradeable = [
       ResourceType.Wood,
       ResourceType.Food,
+      ResourceType.Water,
       ResourceType.Stone,
       ResourceType.Planks,
       ResourceType.Bricks,

@@ -124,6 +124,107 @@ const BUILDING_VISUALS: BuildingVisual[] = [
       return [base, sign, coin];
     },
   },
+  {
+    type: BuildingType.ResearchLab,
+    draw: (scene, cx, cy) => {
+      const lab = scene.add.rectangle(cx, cy + 2, 12, 8, 0x3a5a7a);
+      const roof = scene.add.rectangle(cx, cy - 5, 14, 3, 0x2a4a6a);
+      const flask = scene.add.circle(cx, cy, 3, 0x5588cc);
+      return [lab, roof, flask];
+    },
+  },
+  {
+    type: BuildingType.Garden,
+    draw: (scene, cx, cy) => {
+      const bed = scene.add.rectangle(cx, cy + 2, 12, 8, 0x3a8a3a);
+      const flower1 = scene.add.circle(cx - 3, cy, 2, 0xff6688);
+      const flower2 = scene.add.circle(cx + 3, cy - 1, 2, 0xffcc44);
+      const flower3 = scene.add.circle(cx, cy + 3, 2, 0xaa66ff);
+      return [bed, flower1, flower2, flower3];
+    },
+  },
+  {
+    type: BuildingType.Inn,
+    draw: (scene, cx, cy) => {
+      const base = scene.add.rectangle(cx, cy + 2, 14, 8, 0x6a4a2a);
+      const roof = scene.add.triangle(cx, cy - 5, -8, 4, 0, -4, 8, 4, 0x5a3a1a);
+      const sign = scene.add.rectangle(cx + 6, cy - 2, 4, 3, 0xc9a84c);
+      return [base, roof, sign];
+    },
+  },
+  {
+    type: BuildingType.Academy,
+    draw: (scene, cx, cy) => {
+      const base = scene.add.rectangle(cx, cy + 2, 14, 10, 0x3a4a7a);
+      const columns = scene.add.rectangle(cx, cy - 2, 12, 2, 0xccccdd);
+      const roof = scene.add.triangle(cx, cy - 7, -8, 4, 0, -3, 8, 4, 0x2a3a6a);
+      return [base, columns, roof];
+    },
+  },
+  {
+    type: BuildingType.Wall,
+    draw: (scene, cx, cy) => {
+      const wall = scene.add.rectangle(cx, cy + 2, 14, 10, 0x777777);
+      const merlon1 = scene.add.rectangle(cx - 4, cy - 4, 3, 4, 0x888888);
+      const merlon2 = scene.add.rectangle(cx + 4, cy - 4, 3, 4, 0x888888);
+      return [wall, merlon1, merlon2];
+    },
+  },
+  {
+    type: BuildingType.Tannery,
+    draw: (scene, cx, cy) => {
+      const base = scene.add.rectangle(cx, cy + 2, 12, 8, 0x7a5a2a);
+      const vat = scene.add.circle(cx, cy + 1, 4, 0x8b6914);
+      const hide = scene.add.rectangle(cx - 4, cy + 4, 5, 3, 0xb08040);
+      return [base, vat, hide];
+    },
+  },
+  {
+    type: BuildingType.Forge,
+    draw: (scene, cx, cy) => {
+      const base = scene.add.rectangle(cx, cy + 2, 12, 8, 0x555555);
+      const anvil = scene.add.rectangle(cx - 2, cy + 1, 5, 4, 0x666666);
+      const fire = scene.add.circle(cx + 4, cy, 3, 0xff6622);
+      return [base, anvil, fire];
+    },
+  },
+  {
+    type: BuildingType.Tavern,
+    draw: (scene, cx, cy) => {
+      const base = scene.add.rectangle(cx, cy + 2, 14, 8, 0x7a5a2a);
+      const roof = scene.add.triangle(cx, cy - 5, -8, 4, 0, -4, 8, 4, 0x6a4a1a);
+      const mug = scene.add.rectangle(cx + 5, cy, 3, 4, 0xddcc88);
+      return [base, roof, mug];
+    },
+  },
+  {
+    type: BuildingType.Tower,
+    draw: (scene, cx, cy) => {
+      const base = scene.add.rectangle(cx, cy + 3, 10, 12, 0x666688);
+      const top = scene.add.rectangle(cx, cy - 5, 12, 4, 0x777799);
+      const flag = scene.add.triangle(cx + 4, cy - 8, 0, 0, 6, 2, 0, 4, 0xcc3333);
+      return [base, top, flag];
+    },
+  },
+  {
+    type: BuildingType.Chapel,
+    draw: (scene, cx, cy) => {
+      const base = scene.add.rectangle(cx, cy + 2, 12, 10, 0xccbbaa);
+      const steeple = scene.add.triangle(cx, cy - 8, -4, 6, 0, -4, 4, 6, 0xbbaa99);
+      const cross = scene.add.rectangle(cx, cy - 10, 1, 4, 0xddddcc);
+      const crossBar = scene.add.rectangle(cx, cy - 9, 3, 1, 0xddddcc);
+      return [base, steeple, cross, crossBar];
+    },
+  },
+  {
+    type: BuildingType.Well,
+    draw: (scene, cx, cy) => {
+      const base = scene.add.circle(cx, cy + 2, 6, 0x5a5a5a);
+      const water = scene.add.circle(cx, cy + 2, 4, 0x4488cc);
+      const roof = scene.add.rectangle(cx, cy - 5, 8, 3, 0x6a4a2a);
+      return [base, water, roof];
+    },
+  },
 ];
 
 export class TileMap {

@@ -6,6 +6,7 @@ import { BUILDINGS } from "../config";
 const ALL_BUILD_ORDER: BuildingType[] = [
   BuildingType.House,
   BuildingType.Farm,
+  BuildingType.Well,
   BuildingType.LumberMill,
   BuildingType.Quarry,
   BuildingType.Sawmill,
@@ -35,6 +36,7 @@ const ICONS: Record<ResourceType, string> = {
   [ResourceType.Research]: "\u{1F4D6}",
   [ResourceType.Leather]: "\u{1F9F6}",
   [ResourceType.Tools]: "\u{1F6E0}",
+  [ResourceType.Water]: "\u{1F4A7}",
 };
 
 export class BuildPanel {

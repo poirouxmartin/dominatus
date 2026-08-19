@@ -8,6 +8,7 @@ export enum ResourceType {
   Research = "research",
   Leather = "leather",
   Tools = "tools",
+  Water = "water",
 }
 
 export enum TileType {
@@ -38,6 +39,7 @@ export enum BuildingType {
   Tavern = "tavern",
   Tower = "tower",
   Chapel = "chapel",
+  Well = "well",
 }
 
 export enum Season {
@@ -99,6 +101,7 @@ export interface Resources {
   [ResourceType.Research]: number;
   [ResourceType.Leather]: number;
   [ResourceType.Tools]: number;
+  [ResourceType.Water]: number;
 }
 
 export interface ProductionDef {
