@@ -98,10 +98,26 @@ export class TileMap {
         const log = this.scene.add.rectangle(cx, cy + 4, 10, 4, 0x4a3000);
         this.container.add(log);
         this.buildingGraphics.push(log);
+      } else if (building.type === BuildingType.Quarry) {
+        const rock = this.scene.add.circle(cx, cy + 2, 5, 0x999999);
+        this.container.add(rock);
+        this.buildingGraphics.push(rock as any);
+      } else if (building.type === BuildingType.Sawmill) {
+        const blade = this.scene.add.circle(cx, cy, 4, 0xcccccc);
+        this.container.add(blade);
+        this.buildingGraphics.push(blade as any);
+      } else if (building.type === BuildingType.Brickyard) {
+        const chimney = this.scene.add.rectangle(cx + 4, cy - 6, 3, 8, 0xaa5533);
+        this.container.add(chimney);
+        this.buildingGraphics.push(chimney);
       } else if (building.type === BuildingType.Market) {
         const awning = this.scene.add.rectangle(cx, cy - 4, 12, 3, 0xcc3333);
         this.container.add(awning);
         this.buildingGraphics.push(awning);
+      } else if (building.type === BuildingType.TradingPost) {
+        const sign = this.scene.add.rectangle(cx, cy - 6, 8, 3, 0x3366aa);
+        this.container.add(sign);
+        this.buildingGraphics.push(sign);
       }
     }
   }

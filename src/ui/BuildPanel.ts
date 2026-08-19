@@ -6,17 +6,29 @@ const BUILD_ORDER: BuildingType[] = [
   BuildingType.House,
   BuildingType.Farm,
   BuildingType.LumberMill,
+  BuildingType.Quarry,
+  BuildingType.Sawmill,
+  BuildingType.Brickyard,
   BuildingType.Warehouse,
   BuildingType.Market,
+  BuildingType.TradingPost,
 ];
+
+const SHORT: Record<ResourceType, string> = {
+  [ResourceType.Wood]: "w",
+  [ResourceType.Food]: "f",
+  [ResourceType.Stone]: "s",
+  [ResourceType.Gold]: "g",
+  [ResourceType.Planks]: "p",
+  [ResourceType.Bricks]: "b",
+};
 
 export class BuildPanel {
   scene: Phaser.Scene;
   container: Phaser.GameObjects.Container;
-  buttons: { type: BuildingType; rect: Phaser.GameObjects.Rectangle; text: Phaser.GameObjects.Text; bg: Phaser.GameObjects.Rectangle }[];
+  buttons: { type: BuildingType; bg: Phaser.GameObjects.Rectangle }[];
   selectedType: BuildingType | null;
   onBuild: (type: BuildingType) => void;
-  visible: boolean;
 
   constructor(scene: Phaser.Scene, onBuild: (type: BuildingType) => void) {
     this.scene = scene;
@@ -24,31 +36,34 @@ export class BuildPanel {
     this.buttons = [];
     this.selectedType = null;
     this.onBuild = onBuild;
-    this.visible = true;
 
     const panelBg = scene.add.rectangle(640, 695, 1280, 50, 0x111122, 0.9);
     this.container.add(panelBg);
 
-    let xOff = 40;
+    let xOff = 10;
+    const btnW = 130;
+    const gap = 4;
+
     for (const type of BUILD_ORDER) {
       const def = BUILDINGS[type];
 
-      const bg = scene.add.rectangle(xOff + 55, 695, 110, 40, 0x222244, 0.9);
+      const bg = scene.add.rectangle(xOff + btnW / 2, 695, btnW, 42, 0x222244, 0.9);
       bg.setStrokeStyle(1, 0x444466);
       bg.setInteractive({ useHandCursor: true });
 
-      const label = scene.add.text(xOff + 10, 686, def.name, {
-        fontSize: "11px",
+      const label = scene.add.text(xOff + 4, 685, def.name, {
+        fontSize: "10px",
         fontFamily: "Arial, sans-serif",
         color: "#ffffff",
       });
 
       const costStr = Object.entries(def.cost)
-        .map(([r, a]) => `${a}${r === ResourceType.Wood ? "w" : r === ResourceType.Stone ? "s" : r === ResourceType.Gold ? "g" : "f"}`)
+        .filter(([, a]) => a)
+        .map(([r, a]) => `${a}${SHORT[r as ResourceType] || "?"}`)
         .join(" ");
 
-      const cost = scene.add.text(xOff + 10, 700, costStr, {
-        fontSize: "9px",
+      const cost = scene.add.text(xOff + 4, 699, costStr, {
+        fontSize: "8px",
         fontFamily: "monospace",
         color: "#888888",
       });
@@ -60,20 +75,16 @@ export class BuildPanel {
       });
 
       bg.on("pointerover", () => {
-        if (this.selectedType !== type) {
-          bg.setFillStyle(0x333366);
-        }
+        if (this.selectedType !== type) bg.setFillStyle(0x333366);
       });
 
       bg.on("pointerout", () => {
-        if (this.selectedType !== type) {
-          bg.setFillStyle(0x222244);
-        }
+        if (this.selectedType !== type) bg.setFillStyle(0x222244);
       });
 
       this.container.add([bg, label, cost]);
-      this.buttons.push({ type, rect: bg, text: label, bg });
-      xOff += 120;
+      this.buttons.push({ type, bg });
+      xOff += btnW + gap;
     }
 
     this.container.setDepth(100);

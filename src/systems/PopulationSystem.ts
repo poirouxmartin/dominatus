@@ -1,30 +1,18 @@
 import { GameState } from "../state/GameState";
 import { ResourceType, BuildingType } from "../types";
-import {
-  FOOD_PER_PERSON,
-  HAPPINESS_PER_FOOD,
-  HAPPINESS_PER_HOUSE,
-  POPULATION_GROWTH_THRESHOLD,
-  POPULATION_GROWTH_RATE,
-  STARVATION_DAMAGE,
-} from "../config";
+import { BUILDINGS, BASE_HAPPINESS, FOOD_PER_PERSON, HAPPINESS_PER_FOOD, HAPPINESS_PER_HOUSE, POPULATION_GROWTH_THRESHOLD, POPULATION_GROWTH_RATE, STARVATION_DAMAGE } from "../config";
 
 export class PopulationSystem {
   update(state: GameState): void {
     if (state.buildings.length === 0) return;
 
     let capacity = 0;
-    let foodNeed = 0;
     let houseCount = 0;
 
     for (const b of state.buildings) {
-      if (b.type === BuildingType.House) {
-        capacity += 4;
-        houseCount++;
-      }
-      if (b.type === BuildingType.Farm) foodNeed += 2;
-      if (b.type === BuildingType.LumberMill) foodNeed += 2;
-      if (b.type === BuildingType.Market) foodNeed += 1;
+      const def = BUILDINGS[b.type];
+      capacity += def.populationCapacity;
+      if (b.type === BuildingType.House) houseCount++;
     }
 
     state.population.foodConsumption = state.population.total * FOOD_PER_PERSON;
@@ -32,7 +20,7 @@ export class PopulationSystem {
     const foodAvailable = state.resources[ResourceType.Food];
     const hasEnoughFood = foodAvailable >= state.population.foodConsumption;
 
-    let happiness = 50;
+    let happiness = BASE_HAPPINESS;
 
     if (hasEnoughFood) {
       state.resources[ResourceType.Food] -= state.population.foodConsumption;
@@ -46,6 +34,9 @@ export class PopulationSystem {
     if (state.population.total > 0 && state.population.total >= capacity) {
       happiness -= 10;
     }
+
+    const hasTradingPost = state.buildings.some((b) => b.type === BuildingType.TradingPost);
+    if (hasTradingPost) happiness += 5;
 
     happiness = Math.max(0, Math.min(100, happiness));
     state.population.happiness = happiness;

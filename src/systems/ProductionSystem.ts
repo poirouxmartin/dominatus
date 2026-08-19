@@ -1,5 +1,5 @@
 import { GameState } from "../state/GameState";
-import { BuildingType, Resources, ResourceType, Season } from "../types";
+import { Resources, ResourceType, Season } from "../types";
 import { BUILDINGS } from "../config";
 
 export class ProductionSystem {
@@ -10,16 +10,15 @@ export class ProductionSystem {
       const def = BUILDINGS[building.type];
       if (!def.production) continue;
 
-      if (def.production.input) {
-        let canProduce = true;
-        for (const [res, amt] of Object.entries(def.production.input)) {
-          if ((state.resources[res as ResourceType] ?? 0) < (amt ?? 0)) {
-            canProduce = false;
-            break;
-          }
+      const input = def.production.input;
+      let canProduce = true;
+      for (const [res, amt] of Object.entries(input)) {
+        if (amt && (state.resources[res as ResourceType] ?? 0) < amt) {
+          canProduce = false;
+          break;
         }
-        if (!canProduce) continue;
       }
+      if (!canProduce) continue;
 
       building.productionTimer++;
 
@@ -31,13 +30,13 @@ export class ProductionSystem {
       if (building.productionTimer >= ticksPerCycle) {
         building.productionTimer = 0;
 
-        if (def.production.input) {
-          state.spendResources(def.production.input);
+        for (const [res, amt] of Object.entries(input)) {
+          if (amt) state.resources[res as ResourceType] -= amt;
         }
 
         const output: Partial<Resources> = {};
         for (const [res, amt] of Object.entries(def.production.output)) {
-          output[res as ResourceType] = amt as number;
+          if (amt) output[res as ResourceType] = amt;
         }
         state.addResources(output);
       }

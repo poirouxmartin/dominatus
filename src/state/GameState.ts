@@ -7,11 +7,17 @@ import {
   BuildingType,
   Season,
   PopulationStats,
+  GameEvent,
+  EventType,
 } from "../types";
 import {
   GRID_COLS,
   GRID_ROWS,
   STARTING_RESOURCES,
+  STORAGE_BASE,
+  STORAGE_PER_WAREHOUSE,
+  BUILDINGS,
+  TRADE_PRICES,
 } from "../config";
 
 export class GameState {
@@ -26,6 +32,8 @@ export class GameState {
   storageCapacity: number;
   gameOver: boolean;
   gameSpeed: number;
+  activeEvents: GameEvent[];
+  lastEventTick: number;
 
   constructor() {
     this.resources = { ...STARTING_RESOURCES };
@@ -36,29 +44,29 @@ export class GameState {
     this.seasonTick = 0;
     this.totalTicks = 0;
     this.population = { total: 0, happiness: 50, foodConsumption: 0 };
-    this.storageCapacity = 200;
+    this.storageCapacity = STORAGE_BASE;
     this.gameOver = false;
     this.gameSpeed = 1;
+    this.activeEvents = [];
+    this.lastEventTick = 0;
 
     this.generateMap();
   }
 
   private generateMap(): void {
-    const rng = () => Math.random();
-
     for (let y = 0; y < GRID_ROWS; y++) {
       this.tiles[y] = [];
       for (let x = 0; x < GRID_COLS; x++) {
-        const r = rng();
+        const r = Math.random();
         let type: TileType;
 
-        if (r < 0.15) {
+        if (r < 0.12) {
           type = TileType.Water;
-        } else if (r < 0.25) {
+        } else if (r < 0.22) {
           type = TileType.Mountain;
-        } else if (r < 0.45) {
+        } else if (r < 0.42) {
           type = TileType.Forest;
-        } else if (r < 0.6) {
+        } else if (r < 0.57) {
           type = TileType.Farmable;
         } else {
           type = TileType.Grass;
@@ -82,7 +90,7 @@ export class GameState {
   }
 
   canPlaceBuilding(type: BuildingType, gridX: number, gridY: number): boolean {
-    const def = this.getBuildingDef(type);
+    const def = BUILDINGS[type];
     if (!def) return false;
 
     for (let dy = 0; dy < def.size.h; dy++) {
@@ -102,9 +110,7 @@ export class GameState {
   placeBuilding(type: BuildingType, gridX: number, gridY: number): PlacedBuilding | null {
     if (!this.canPlaceBuilding(type, gridX, gridY)) return null;
 
-    const def = this.getBuildingDef(type);
-    if (!def) return null;
-
+    const def = BUILDINGS[type];
     this.spendResources(def.cost);
 
     const building: PlacedBuilding = {
@@ -126,17 +132,15 @@ export class GameState {
 
     this.recalculateStorage();
     this.recalculatePopulation();
-
     return building;
   }
 
-  removeBuilding(buildingId: number): void {
+  removeBuilding(buildingId: number): boolean {
     const idx = this.buildings.findIndex((b) => b.id === buildingId);
-    if (idx === -1) return;
+    if (idx === -1) return false;
 
     const building = this.buildings[idx];
-    const def = this.getBuildingDef(building.type);
-    if (!def) return;
+    const def = BUILDINGS[building.type];
 
     for (let dy = 0; dy < def.size.h; dy++) {
       for (let dx = 0; dx < def.size.w; dx++) {
@@ -153,121 +157,101 @@ export class GameState {
     this.buildings.splice(idx, 1);
     this.recalculateStorage();
     this.recalculatePopulation();
+    return true;
   }
 
   hasResources(cost: Partial<Resources>): boolean {
     for (const [res, amt] of Object.entries(cost)) {
-      if ((this.resources[res as ResourceType] ?? 0) < (amt ?? 0)) return false;
+      if (amt && (this.resources[res as ResourceType] ?? 0) < amt) return false;
     }
     return true;
   }
 
   spendResources(cost: Partial<Resources>): void {
     for (const [res, amt] of Object.entries(cost)) {
-      this.resources[res as ResourceType] -= amt as number;
+      if (amt) this.resources[res as ResourceType] -= amt;
     }
   }
 
   addResources(amounts: Partial<Resources>): void {
     for (const [res, amt] of Object.entries(amounts)) {
+      if (!amt) continue;
       const key = res as ResourceType;
-      this.resources[key] = Math.min(
-        this.resources[key] + (amt ?? 0),
-        this.storageCapacity
-      );
+      this.resources[key] = Math.min(this.resources[key] + amt, this.storageCapacity);
     }
   }
 
   recalculateStorage(): void {
-    let bonus = 200;
+    let cap = STORAGE_BASE;
     for (const b of this.buildings) {
-      if (b.type === BuildingType.Warehouse) bonus += 200;
+      if (b.type === BuildingType.Warehouse) cap += STORAGE_PER_WAREHOUSE;
     }
-    this.storageCapacity = bonus;
+    this.storageCapacity = cap;
   }
 
   recalculatePopulation(): void {
     let capacity = 0;
-    let need = 0;
     for (const b of this.buildings) {
-      const def = this.getBuildingDef(b.type);
-      if (!def) continue;
-      capacity += def.populationCapacity;
-      need += def.populationNeed;
+      capacity += BUILDINGS[b.type].populationCapacity;
     }
-    this.population.foodConsumption = need;
-
     if (this.population.total > capacity) {
       this.population.total = capacity;
     }
   }
 
+  canTrade(resource: ResourceType, amount: number, direction: "buy" | "sell"): boolean {
+    if (resource === ResourceType.Gold) return false;
+    const price = TRADE_PRICES[resource];
+    if (!price) return false;
+
+    if (direction === "buy") {
+      return this.resources[ResourceType.Gold] >= price.buy * amount;
+    } else {
+      return this.resources[resource] >= amount;
+    }
+  }
+
+  trade(resource: ResourceType, amount: number, direction: "buy" | "sell"): boolean {
+    if (!this.canTrade(resource, amount, direction)) return false;
+
+    const price = TRADE_PRICES[resource];
+
+    if (direction === "buy") {
+      this.resources[ResourceType.Gold] -= price.buy * amount;
+      this.resources[resource] = Math.min(this.resources[resource] + amount, this.storageCapacity);
+    } else {
+      this.resources[resource] -= amount;
+      this.resources[ResourceType.Gold] = Math.min(
+        this.resources[ResourceType.Gold] + price.sell * amount,
+        this.storageCapacity
+      );
+    }
+
+    return true;
+  }
+
+  addEvent(event: GameEvent): void {
+    this.activeEvents.push(event);
+  }
+
+  processEvents(): string[] {
+    const messages: string[] = [];
+
+    for (let i = this.activeEvents.length - 1; i >= 0; i--) {
+      const event = this.activeEvents[i];
+      if (event.tickRemaining <= 0) {
+        event.effect(this);
+        messages.push(event.message);
+        this.activeEvents.splice(i, 1);
+      } else {
+        event.tickRemaining--;
+      }
+    }
+
+    return messages;
+  }
+
   getBuildingDef(type: BuildingType) {
-    const defs: Record<BuildingType, any> = {
-      [BuildingType.House]: {
-        type: BuildingType.House,
-        name: "House",
-        cost: { [ResourceType.Wood]: 10 },
-        populationCapacity: 4,
-        populationNeed: 1,
-        size: { w: 1, h: 1 },
-        requiredTile: null,
-      },
-      [BuildingType.Farm]: {
-        type: BuildingType.Farm,
-        name: "Farm",
-        cost: { [ResourceType.Wood]: 15 },
-        production: {
-          input: {},
-          output: { [ResourceType.Food]: 4 },
-          ticksPerCycle: 3,
-          winterMultiplier: 0.2,
-        },
-        populationCapacity: 0,
-        populationNeed: 2,
-        size: { w: 2, h: 2 },
-        requiredTile: TileType.Farmable,
-      },
-      [BuildingType.LumberMill]: {
-        type: BuildingType.LumberMill,
-        name: "Lumber Mill",
-        cost: { [ResourceType.Wood]: 8 },
-        production: {
-          input: {},
-          output: { [ResourceType.Wood]: 3 },
-          ticksPerCycle: 2,
-          winterMultiplier: 0.7,
-        },
-        populationCapacity: 0,
-        populationNeed: 2,
-        size: { w: 1, h: 1 },
-        requiredTile: TileType.Forest,
-      },
-      [BuildingType.Warehouse]: {
-        type: BuildingType.Warehouse,
-        name: "Warehouse",
-        cost: { [ResourceType.Wood]: 20, [ResourceType.Stone]: 10 },
-        production: null,
-        populationCapacity: 0,
-        populationNeed: 0,
-        size: { w: 1, h: 1 },
-        requiredTile: null,
-      },
-      [BuildingType.Market]: {
-        type: BuildingType.Market,
-        name: "Market",
-        cost: { [ResourceType.Wood]: 25, [ResourceType.Stone]: 15 },
-        production: {
-          input: {},
-          output: { [ResourceType.Gold]: 2 },
-          ticksPerCycle: 5,
-        },
-        populationCapacity: 0,
-        populationNeed: 1,
-        size: { w: 1, h: 1 },
-        requiredTile: null,
-      },
-    };
-    return defs[type] ?? null;
+    return BUILDINGS[type] ?? null;
   }
 }
