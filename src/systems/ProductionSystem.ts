@@ -1,5 +1,5 @@
 import { GameState } from "../state/GameState";
-import { Resources, ResourceType, Season } from "../types";
+import { BuildingType, Resources, ResourceType, Season } from "../types";
 import { BUILDINGS } from "../config";
 
 export class ProductionSystem {
@@ -8,6 +8,34 @@ export class ProductionSystem {
 
     for (const building of state.buildings) {
       if (!building.active) continue;
+
+      if (building.type === BuildingType.Forester) {
+        building.productionTimer++;
+        if (building.productionTimer >= 5) {
+          building.productionTimer = 0;
+          state.convertGrassToForest(building.gridX, building.gridY, 3);
+        }
+        continue;
+      }
+
+      if (building.type === BuildingType.HuntingCabin) {
+        building.productionTimer++;
+        const forestCount = state.countForestNear(building.gridX, building.gridY, 3);
+        const bonus = Math.floor(forestCount / 3);
+        const baseOutput = 2 + bonus;
+
+        let ticksPerCycle = 4;
+        if (state.season === Season.Winter) {
+          ticksPerCycle = Math.ceil(ticksPerCycle / 0.8);
+        }
+
+        if (building.productionTimer >= ticksPerCycle) {
+          building.productionTimer = 0;
+          const finalAmt = Math.ceil(baseOutput * bonuses.foodMultiplier);
+          state.addResources({ [ResourceType.Food]: finalAmt });
+        }
+        continue;
+      }
 
       const def = BUILDINGS[building.type];
       if (!def.production) continue;

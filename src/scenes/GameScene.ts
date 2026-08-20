@@ -4,6 +4,7 @@ import { TileMap } from "../map/TileMap";
 import { HUD } from "../ui/HUD";
 import { BuildPanel } from "../ui/BuildPanel";
 import { TechPanel } from "../ui/TechPanel";
+import { EventLog } from "../ui/EventLog";
 import { ProductionSystem } from "../systems/ProductionSystem";
 import { PopulationSystem } from "../systems/PopulationSystem";
 import { SeasonSystem } from "../systems/SeasonSystem";
@@ -18,6 +19,7 @@ export class GameScene extends Phaser.Scene {
   hud!: HUD;
   buildPanel!: BuildPanel;
   techPanel!: TechPanel;
+  eventLog!: EventLog;
   prodSystem!: ProductionSystem;
   popSystem!: PopulationSystem;
   seasonSystem!: SeasonSystem;
@@ -49,6 +51,7 @@ export class GameScene extends Phaser.Scene {
     this.eventSystem = new EventSystem();
     this.techSystem = new TechSystem();
     this.techPanel = new TechPanel(this);
+    this.eventLog = new EventLog(this);
 
     this.buildPanel = new BuildPanel(this, (type) => {
       this.selectedBuildType = type;
@@ -81,6 +84,7 @@ export class GameScene extends Phaser.Scene {
       this.tileMap.clearPreview();
       this.hud.hideTrade();
       this.techPanel.hide();
+      this.eventLog.hide();
     });
 
     this.input.keyboard?.on("keydown-SPACE", () => {
@@ -94,7 +98,14 @@ export class GameScene extends Phaser.Scene {
 
     this.input.keyboard?.on("keydown-R", () => {
       this.hud.hideTrade();
+      this.eventLog.hide();
       this.techPanel.toggle(this.state);
+    });
+
+    this.input.keyboard?.on("keydown-L", () => {
+      this.techPanel.hide();
+      this.hud.hideTrade();
+      this.eventLog.toggle(this.state);
     });
 
     this.input.keyboard?.on("keydown-F5", () => {

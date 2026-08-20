@@ -45,6 +45,7 @@ export class GameState {
   researchedTechs: string[];
   researchTarget: string | null;
   researchProgress: number;
+  eventLog: string[];
 
   constructor(saved?: SaveData) {
     if (saved) {
@@ -65,6 +66,7 @@ export class GameState {
       this.researchedTechs = [...saved.researchedTechs];
       this.researchTarget = saved.researchTarget;
       this.researchProgress = saved.researchProgress;
+      this.eventLog = saved.eventLog ? [...saved.eventLog] : [];
     } else {
       this.resources = { ...STARTING_RESOURCES };
       this.tiles = [];
@@ -83,6 +85,7 @@ export class GameState {
       this.researchedTechs = [];
       this.researchTarget = null;
       this.researchProgress = 0;
+      this.eventLog = [];
       this.generateMap();
     }
   }
@@ -284,6 +287,39 @@ export class GameState {
     return this.buildings.some((b) => b.type === BuildingType.Wall);
   }
 
+  countForestNear(gridX: number, gridY: number, radius: number): number {
+    let count = 0;
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const tx = gridX + dx;
+        const ty = gridY + dy;
+        if (tx >= 0 && tx < GRID_COLS && ty >= 0 && ty < GRID_ROWS) {
+          if (this.tiles[ty][tx].type === TileType.Forest) count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  convertGrassToForest(gridX: number, gridY: number, radius: number): boolean {
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const tx = gridX + dx;
+        const ty = gridY + dy;
+        if (tx >= 0 && tx < GRID_COLS && ty >= 0 && ty < GRID_ROWS) {
+          const tile = this.tiles[ty][tx];
+          if (tile.type === TileType.Grass && tile.buildingId === null) {
+            if (Math.random() < 0.3) {
+              tile.type = TileType.Forest;
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   countTowers(): number {
     return this.buildings.filter((b) => b.type === BuildingType.Tower).length;
   }
@@ -340,6 +376,8 @@ export class GameState {
       if (event.tickRemaining <= 0) {
         event.effect(this);
         messages.push(event.message);
+        this.eventLog.unshift(`t${this.totalTicks}: ${event.message}`);
+        if (this.eventLog.length > 100) this.eventLog.pop();
         this.activeEvents.splice(i, 1);
       } else {
         event.tickRemaining--;
@@ -365,6 +403,7 @@ export class GameState {
       researchedTechs: [...this.researchedTechs],
       researchTarget: this.researchTarget,
       researchProgress: this.researchProgress,
+      eventLog: [...this.eventLog],
     };
   }
 

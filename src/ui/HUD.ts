@@ -55,6 +55,7 @@ export class HUD {
   infoText: Phaser.GameObjects.Text;
   researchInfoText: Phaser.GameObjects.Text;
   defenseText: Phaser.GameObjects.Text;
+  alertText: Phaser.GameObjects.Text;
   eventTexts: Phaser.GameObjects.Text[];
   tradePanel: Phaser.GameObjects.Container | null = null;
   tradeVisible: boolean = false;
@@ -145,6 +146,15 @@ export class HUD {
     });
     this.container.add(this.researchInfoText);
 
+    this.alertText = scene.add.text(12, 68, "", {
+      fontSize: "11px",
+      fontFamily: "'Courier New', monospace",
+      color: "#d9534f",
+      backgroundColor: "#1a0f0fDD",
+      padding: { x: 6, y: 3 },
+    });
+    this.container.add(this.alertText);
+
     this.container.setDepth(100);
   }
 
@@ -202,6 +212,13 @@ export class HUD {
     } else {
       this.researchInfoText.setText("");
     }
+
+    const alerts: string[] = [];
+    if (state.resources[ResourceType.Food] < 20 && state.population.total > 0) alerts.push("LOW FOOD");
+    if (state.resources[ResourceType.Wood] < 10) alerts.push("LOW WOOD");
+    if (state.resources[ResourceType.Stone] < 10 && state.buildings.length > 3) alerts.push("LOW STONE");
+    if (state.population.happiness < 30) alerts.push("UNHAPPY");
+    this.alertText.setText(alerts.length > 0 ? "\u26A0 " + alerts.join("  \u2022  ") : "");
 
     for (const t of this.eventTexts) t.destroy();
     this.eventTexts = [];

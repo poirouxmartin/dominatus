@@ -235,6 +235,9 @@ export class TileMap {
   hoverHighlight: Phaser.GameObjects.Rectangle;
   shadowLayer: Phaser.GameObjects.Graphics;
   currentSeason: Season = Season.Spring;
+  minimapContainer: Phaser.GameObjects.Container;
+  minimapPixels: Phaser.GameObjects.Rectangle[][] = [];
+  minimapCam: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -264,6 +267,25 @@ export class TileMap {
     this.hoverHighlight.setFillStyle(0xffffff, 0.15);
     this.hoverHighlight.setVisible(false);
     this.container.add(this.hoverHighlight);
+
+    this.minimapContainer = scene.add.container(1280 - GRID_COLS * 4 - 12, 720 - GRID_ROWS * 4 - 12);
+    const mmBg = scene.add.rectangle(GRID_COLS * 2, GRID_ROWS * 2, GRID_COLS * 4 + 4, GRID_ROWS * 4 + 4, 0x0f0f1e, 0.85);
+    mmBg.setStrokeStyle(1, 0xc9a84c, 0.4);
+    this.minimapContainer.add(mmBg);
+
+    for (let y = 0; y < GRID_ROWS; y++) {
+      this.minimapPixels[y] = [];
+      for (let x = 0; x < GRID_COLS; x++) {
+        const px = scene.add.rectangle(x * 4 + 2, y * 4 + 2, 4, 4, 0x3d6b35);
+        this.minimapPixels[y][x] = px;
+        this.minimapContainer.add(px);
+      }
+    }
+
+    this.minimapCam = scene.add.graphics();
+    this.minimapContainer.add(this.minimapCam);
+
+    this.minimapContainer.setDepth(90);
   }
 
   sync(state: GameState): void {
@@ -315,6 +337,37 @@ export class TileMap {
         this.buildingGfx.push(container);
       }
     }
+
+    for (let y = 0; y < GRID_ROWS; y++) {
+      for (let x = 0; x < GRID_COLS; x++) {
+        const tile = state.tiles[y][x];
+        const px = this.minimapPixels[y][x];
+        if (tile.buildingId !== null) {
+          const building = state.buildings.find((b) => b.id === tile.buildingId);
+          if (building) {
+            px.setFillStyle(BUILDINGS[building.type].color);
+          } else {
+            px.setFillStyle(tileColor(tile.type, x, y, state.season));
+          }
+        } else {
+          px.setFillStyle(tileColor(tile.type, x, y, state.season));
+        }
+      }
+    }
+
+    this.minimapCam.clear();
+    const camW = Math.floor(this.scene.cameras.main.width / this.scene.cameras.main.zoom);
+    const camH = Math.floor(this.scene.cameras.main.height / this.scene.cameras.main.zoom);
+    const camX = Math.floor(-this.scene.cameras.main.scrollX / this.scene.cameras.main.zoom);
+    const camY = Math.floor(-this.scene.cameras.main.scrollY / this.scene.cameras.main.zoom);
+    const mmScale = 4;
+    this.minimapCam.lineStyle(1, 0xffffff, 0.6);
+    this.minimapCam.strokeRect(
+      (camX / TILE_SIZE) * mmScale,
+      (camY / TILE_SIZE) * mmScale,
+      (camW / TILE_SIZE) * mmScale,
+      (camH / TILE_SIZE) * mmScale
+    );
   }
 
   showHover(gridX: number, gridY: number, valid: boolean): void {

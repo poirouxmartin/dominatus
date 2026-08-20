@@ -8,6 +8,8 @@ const ALL_BUILD_ORDER: BuildingType[] = [
   BuildingType.Farm,
   BuildingType.Well,
   BuildingType.LumberMill,
+  BuildingType.Forester,
+  BuildingType.HuntingCabin,
   BuildingType.Quarry,
   BuildingType.Sawmill,
   BuildingType.Brickyard,

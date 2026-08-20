@@ -40,6 +40,8 @@ export enum BuildingType {
   Tower = "tower",
   Chapel = "chapel",
   Well = "well",
+  Forester = "forester",
+  HuntingCabin = "huntingCabin",
 }
 
 export enum Season {
@@ -169,4 +171,5 @@ export interface SaveData {
   researchedTechs: string[];
   researchTarget: string | null;
   researchProgress: number;
+  eventLog: string[];
 }
