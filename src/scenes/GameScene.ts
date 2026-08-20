@@ -142,6 +142,12 @@ export class GameScene extends Phaser.Scene {
 
     this.lastTick = this.time.now;
     this.cameras.main.fadeIn(400, 15, 15, 30);
+
+    if (!GameState.hasSave()) {
+      this.time.delayedCall(1000, () => {
+        this.hud.setInfo("Welcome! Build a House (10 wood) to start. Forest tiles are green, mountains are grey.", "#c9a84c");
+      });
+    }
   }
 
   private selectBuild(type: BuildingType): void {
@@ -161,8 +167,15 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.selectedBuildType) {
-      const valid = this.state.canPlaceBuilding(this.selectedBuildType, gridX, gridY);
+      const reason = this.state.getPlacementReason(this.selectedBuildType, gridX, gridY);
+      const valid = reason === null;
       this.tileMap.setBuildingPreview(this.selectedBuildType, gridX, gridY, valid);
+      if (!valid) {
+        this.hud.setInfo(reason || "", "#ff6644");
+      } else {
+        const def = BUILDINGS[this.selectedBuildType];
+        this.hud.setInfo(`${def.name} — Click to build`, "#5cb85c");
+      }
     } else {
       const tile = this.state.tiles[gridY]?.[gridX];
       if (tile && tile.buildingId !== null) {

@@ -227,7 +227,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     type: BuildingType.House,
     name: "House",
     description: "Houses 4 people. Consumes food.",
-    cost: { [ResourceType.Wood]: 10, [ResourceType.Planks]: 5 },
+    cost: { [ResourceType.Wood]: 10 },
     production: null,
     populationCapacity: 4,
     populationNeed: 1,

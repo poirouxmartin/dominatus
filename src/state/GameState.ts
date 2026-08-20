@@ -115,8 +115,9 @@ export class GameState {
 
     const cx = Math.floor(GRID_COLS / 2);
     const cy = Math.floor(GRID_ROWS / 2);
-    for (let dy = -2; dy <= 2; dy++) {
-      for (let dx = -2; dx <= 2; dx++) {
+
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
         const ny = cy + dy;
         const nx = cx + dx;
         if (ny >= 0 && ny < GRID_ROWS && nx >= 0 && nx < GRID_COLS) {
@@ -124,26 +125,70 @@ export class GameState {
         }
       }
     }
+
+    const guaranteed: [number, number, TileType][] = [
+      [cx - 2, cy - 1, TileType.Forest],
+      [cx - 3, cy + 1, TileType.Forest],
+      [cx + 2, cy - 2, TileType.Forest],
+      [cx + 3, cy + 0, TileType.Forest],
+      [cx + 1, cy + 2, TileType.Farmable],
+      [cx - 1, cy + 3, TileType.Farmable],
+      [cx + 2, cy + 3, TileType.Farmable],
+      [cx + 3, cy + 2, TileType.Farmable],
+      [cx - 3, cy - 2, TileType.Mountain],
+      [cx + 3, cy - 2, TileType.Mountain],
+    ];
+
+    for (const [gx, gy, gt] of guaranteed) {
+      if (gy >= 0 && gy < GRID_ROWS && gx >= 0 && gx < GRID_COLS) {
+        this.tiles[gy][gx].type = gt;
+      }
+    }
   }
 
   canPlaceBuilding(type: BuildingType, gridX: number, gridY: number): boolean {
-    const def = BUILDINGS[type];
-    if (!def) return false;
+    return this.getPlacementReason(type, gridX, gridY) === null;
+  }
 
-    if (def.requiredTech && !this.researchedTechs.includes(def.requiredTech)) return false;
+  getPlacementReason(type: BuildingType, gridX: number, gridY: number): string | null {
+    const def = BUILDINGS[type];
+    if (!def) return "Unknown building";
+
+    if (def.requiredTech && !this.researchedTechs.includes(def.requiredTech)) {
+      return `Requires tech: ${def.requiredTech}`;
+    }
 
     for (let dy = 0; dy < def.size.h; dy++) {
       for (let dx = 0; dx < def.size.w; dx++) {
         const tx = gridX + dx;
         const ty = gridY + dy;
-        if (tx < 0 || tx >= GRID_COLS || ty < 0 || ty >= GRID_ROWS) return false;
+        if (tx < 0 || tx >= GRID_COLS || ty < 0 || ty >= GRID_ROWS) return "Out of bounds";
         const tile = this.tiles[ty][tx];
-        if (tile.buildingId !== null) return false;
-        if (def.requiredTile && tile.type !== def.requiredTile) return false;
+        if (tile.buildingId !== null) return "Tile occupied";
+        if (def.requiredTile && tile.type !== def.requiredTile) {
+          const tileNames: Record<string, string> = {
+            forest: "Forest",
+            mountain: "Mountain",
+            farmable: "Farmable",
+            water: "Water",
+            grass: "Grass",
+          };
+          return `Needs ${tileNames[def.requiredTile] || def.requiredTile} tile`;
+        }
       }
     }
 
-    return this.hasResources(def.cost);
+    if (!this.hasResources(def.cost)) {
+      const missing: string[] = [];
+      for (const [res, amt] of Object.entries(def.cost)) {
+        if (amt && (this.resources[res as ResourceType] ?? 0) < amt) {
+          missing.push(`${res} (${amt})`);
+        }
+      }
+      return `Need: ${missing.join(", ")}`;
+    }
+
+    return null;
   }
 
   placeBuilding(type: BuildingType, gridX: number, gridY: number): PlacedBuilding | null {
