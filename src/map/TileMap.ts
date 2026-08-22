@@ -18,6 +18,13 @@ const SEASON_TINT: Record<Season, { r: number; g: number; b: number }> = {
   [Season.Winter]: { r: -20, g: -15, b: 10 },
 };
 
+const TREE_COLORS: Record<Season, number> = {
+  [Season.Spring]: 0x4d8f3c,
+  [Season.Summer]: 0x3f7f33,
+  [Season.Autumn]: 0xbf7a2e,
+  [Season.Winter]: 0x86988a,
+};
+
 function tileColor(type: TileType, x: number, y: number, season: Season): number {
   const base = TILE_BASE[type];
   const noise = ((x * 7 + y * 13) % 17) / 17;
@@ -234,6 +241,7 @@ export class TileMap {
   buildingGfx: Phaser.GameObjects.Container[] = [];
   hoverHighlight: Phaser.GameObjects.Rectangle;
   shadowLayer: Phaser.GameObjects.Graphics;
+  decoLayer: Phaser.GameObjects.Graphics;
   currentSeason: Season = Season.Spring;
   minimapContainer: Phaser.GameObjects.Container;
   minimapPixels: Phaser.GameObjects.Rectangle[][] = [];
@@ -242,6 +250,16 @@ export class TileMap {
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.container = scene.add.container(0, 0);
+
+    const mapW = GRID_COLS * TILE_SIZE;
+    const mapH = GRID_ROWS * TILE_SIZE;
+
+    const dropShadow = scene.add.rectangle(mapW / 2 + 7, mapH / 2 + 9, mapW + 8, mapH + 8, 0x000000, 0.4);
+    this.container.add(dropShadow);
+
+    const frame = scene.add.rectangle(mapW / 2, mapH / 2, mapW + 6, mapH + 6);
+    frame.setStrokeStyle(1, 0xc9a84c, 0.18);
+    this.container.add(frame);
 
     this.shadowLayer = scene.add.graphics();
     this.container.add(this.shadowLayer);
@@ -261,6 +279,9 @@ export class TileMap {
         this.container.add(rect);
       }
     }
+
+    this.decoLayer = scene.add.graphics();
+    this.container.add(this.decoLayer);
 
     this.hoverHighlight = scene.add.rectangle(0, 0, TILE_SIZE, TILE_SIZE);
     this.hoverHighlight.setStrokeStyle(2, 0xffffff);
@@ -288,11 +309,80 @@ export class TileMap {
     this.minimapContainer.setDepth(90);
   }
 
+  private drawDecorations(state: GameState): void {
+    const g = this.decoLayer;
+    g.clear();
+
+    for (let y = 0; y < GRID_ROWS; y++) {
+      for (let x = 0; x < GRID_COLS; x++) {
+        const tile = state.tiles[y][x];
+        if (tile.buildingId !== null) continue;
+
+        const px = x * TILE_SIZE + TILE_SIZE / 2;
+        const py = y * TILE_SIZE + TILE_SIZE / 2;
+        const hash = Math.abs((x * 73856093) ^ (y * 19349663));
+
+        switch (tile.type) {
+          case TileType.Forest: {
+            const count = 2 + (hash % 2);
+            const canopy = TREE_COLORS[state.season];
+            const canopyLight = Phaser.Display.Color.IntegerToColor(canopy).brighten(30).color;
+            for (let i = 0; i < count; i++) {
+              const tx = px - 8 + ((hash >> (i * 3)) % 17);
+              const ty = py - 4 + ((hash >> (i * 5 + 2)) % 13);
+              g.fillStyle(0x5a3a20, 1);
+              g.fillRect(tx - 1, ty + 1, 2, 4);
+              g.fillStyle(canopy, 1);
+              g.fillTriangle(tx - 5, ty + 2, tx + 5, ty + 2, tx, ty - 6);
+              g.fillStyle(canopyLight, 0.9);
+              g.fillTriangle(tx - 3, ty - 2, tx + 3, ty - 2, tx, ty - 8);
+            }
+            break;
+          }
+          case TileType.Mountain: {
+            g.fillStyle(0x7e7e88, 1);
+            g.fillTriangle(px - 14, py + 11, px + 14, py + 11, px, py - 13);
+            g.fillStyle(0x94949e, 1);
+            g.fillTriangle(px - 14, py + 11, px, py + 11, px, py - 13);
+            g.fillStyle(0xe8ecf2, 1);
+            g.fillTriangle(px, py - 13, px - 5, py - 4, px + 5, py - 4);
+            break;
+          }
+          case TileType.Water: {
+            g.fillStyle(0xaad4ee, 0.28);
+            g.fillEllipse(px - 5 + (hash % 3), py - 5, 10, 2);
+            g.fillEllipse(px + 6 - (hash % 4), py + 3, 9, 2);
+            g.fillEllipse(px - 2 + (hash % 2), py + 9, 8, 2);
+            break;
+          }
+          case TileType.Farmable: {
+            g.fillStyle(state.season === Season.Autumn ? 0x8a6a28 : 0x3f6b28, 0.85);
+            for (let r = 0; r < 3; r++) {
+              g.fillRect(px - 11, py - 8 + r * 7, 22, 2);
+            }
+            break;
+          }
+          case TileType.Grass: {
+            if (state.season === Season.Winter && hash % 7 === 0) {
+              g.fillStyle(0xf0f4f8, 0.55);
+              g.fillEllipse(px - 6 + (hash % 10), py - 4 + (hash % 8), 8, 3);
+            } else if (hash % 9 === 0) {
+              const fx = px - 8 + (hash % 16);
+              const fy = py - 8 + ((hash >> 4) % 16);
+              g.fillStyle(hash % 18 === 0 ? 0xe8d070 : 0xdd8899, 0.9);
+              g.fillCircle(fx, fy, 1.5);
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
   sync(state: GameState): void {
     if (state.season !== this.currentSeason) {
       this.currentSeason = state.season;
     }
-
     for (let y = 0; y < GRID_ROWS; y++) {
       for (let x = 0; x < GRID_COLS; x++) {
         const tile = state.tiles[y][x];
@@ -316,6 +406,8 @@ export class TileMap {
     }
     this.buildingGfx = [];
 
+    this.drawDecorations(state);
+
     this.shadowLayer.clear();
 
     for (const building of state.buildings) {
@@ -337,6 +429,12 @@ export class TileMap {
         this.buildingGfx.push(container);
       }
     }
+
+    if (this.buildingGfx.length > 0) {
+      this.container.moveBelow(this.shadowLayer as any, this.buildingGfx[0] as any);
+    }
+
+    this.container.bringToTop(this.hoverHighlight);
 
     for (let y = 0; y < GRID_ROWS; y++) {
       for (let x = 0; x < GRID_COLS; x++) {
@@ -376,8 +474,8 @@ export class TileMap {
       gridY * TILE_SIZE + TILE_SIZE / 2
     );
     this.hoverHighlight.setSize(TILE_SIZE, TILE_SIZE);
-    this.hoverHighlight.setStrokeStyle(2, valid ? 0x00ff00 : 0xff0000);
-    this.hoverHighlight.setFillStyle(valid ? 0x00ff00 : 0xff0000, 0.1);
+    this.hoverHighlight.setStrokeStyle(2, 0xc9a84c, 0.7);
+    this.hoverHighlight.setFillStyle(0xc9a84c, 0.08);
     this.hoverHighlight.setVisible(true);
   }
 
@@ -389,10 +487,10 @@ export class TileMap {
     const def = BUILDINGS[type];
     const w = def.size.w * TILE_SIZE;
     const h = def.size.h * TILE_SIZE;
-    this.hoverHighlight.setSize(w, h);
+    this.hoverHighlight.setSize(w - 2, h - 2);
     this.hoverHighlight.setPosition(gridX * TILE_SIZE + w / 2, gridY * TILE_SIZE + h / 2);
-    this.hoverHighlight.setFillStyle(valid ? 0x00ff00 : 0xff0000, 0.2);
-    this.hoverHighlight.setStrokeStyle(2, valid ? 0x00ff00 : 0xff0000);
+    this.hoverHighlight.setFillStyle(valid ? 0x8fdc7a : 0xe06a55, valid ? 0.18 : 0.22);
+    this.hoverHighlight.setStrokeStyle(2, valid ? 0x8fdc7a : 0xe06a55, 0.9);
     this.hoverHighlight.setVisible(true);
   }
 

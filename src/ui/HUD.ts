@@ -56,6 +56,8 @@ export class HUD {
   researchInfoText: Phaser.GameObjects.Text;
   defenseText: Phaser.GameObjects.Text;
   alertText: Phaser.GameObjects.Text;
+  seasonBarBg: Phaser.GameObjects.Rectangle;
+  seasonBarFill: Phaser.GameObjects.Rectangle;
   eventTexts: Phaser.GameObjects.Text[];
   tradePanel: Phaser.GameObjects.Container | null = null;
   tradeVisible: boolean = false;
@@ -93,28 +95,36 @@ export class HUD {
     });
     this.container.add(this.seasonText);
 
-    this.popText = scene.add.text(xOff + 110, 13, "", {
+    this.seasonBarBg = scene.add.rectangle(xOff + 100, 22, 44, 5, 0x2a2a3a);
+    this.seasonBarBg.setStrokeStyle(1, 0x000000, 0.4);
+    this.container.add(this.seasonBarBg);
+
+    this.seasonBarFill = scene.add.rectangle(xOff + 79, 22, 0, 3, 0xffffff);
+    this.seasonBarFill.setOrigin(0, 0.5);
+    this.container.add(this.seasonBarFill);
+
+    this.popText = scene.add.text(xOff + 156, 13, "", {
       fontSize: "12px",
       fontFamily: "'Courier New', monospace",
       color: "#e8e0d0",
     });
     this.container.add(this.popText);
 
-    this.tierText = scene.add.text(xOff + 200, 13, "", {
+    this.tierText = scene.add.text(xOff + 246, 14, "", {
       fontSize: "10px",
       fontFamily: "'Courier New', monospace",
       color: "#c9a84c",
     });
     this.container.add(this.tierText);
 
-    this.happinessText = scene.add.text(xOff + 260, 13, "", {
+    this.happinessText = scene.add.text(xOff + 310, 13, "", {
       fontSize: "12px",
       fontFamily: "'Courier New', monospace",
       color: "#e8e0d0",
     });
     this.container.add(this.happinessText);
 
-    this.defenseText = scene.add.text(xOff + 350, 13, "", {
+    this.defenseText = scene.add.text(xOff + 396, 14, "", {
       fontSize: "10px",
       fontFamily: "'Courier New', monospace",
       color: "#d9534f",
@@ -167,6 +177,10 @@ export class HUD {
     const sColor = SEASON_COLORS[state.season] || "#ffffff";
     this.seasonText.setText(`${SEASON_LABELS[state.season] || state.season}  t${state.seasonTick}`);
     this.seasonText.setColor(sColor);
+
+    const seasonProgress = Phaser.Math.Clamp(state.seasonTick / 30, 0, 1);
+    this.seasonBarFill.width = 42 * seasonProgress;
+    this.seasonBarFill.setFillStyle(Phaser.Display.Color.HexStringToColor(sColor).color);
 
     const pop = Math.floor(state.population.total);
     const cap = state.buildings.reduce((sum, b) => sum + BUILDINGS[b.type].populationCapacity, 0);
