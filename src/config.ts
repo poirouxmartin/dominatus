@@ -596,4 +596,5 @@ export const RESEARCH_PER_PERSON = 0.02;
 export const VICTORY_POPULATION = 40;
 export const VICTORY_TECHS = 14;
 
-export const SAVE_KEY = "dominatus_save_v1";
+export const SAVE_KEY = "dominatus_save_v2";
+export const SAVE_VERSION = 2;

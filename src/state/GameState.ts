@@ -25,6 +25,7 @@ import {
   RAID_WALL_REDUCTION,
   RAID_TOWER_REDUCTION,
   SAVE_KEY,
+  SAVE_VERSION,
 } from "../config";
 
 export class GameState {
@@ -48,8 +49,8 @@ export class GameState {
   eventLog: string[];
 
   constructor(saved?: SaveData) {
-    if (saved) {
-      this.resources = { ...saved.resources };
+    if (saved && saved.version === SAVE_VERSION) {
+      this.resources = { ...STARTING_RESOURCES, ...saved.resources };
       this.tiles = saved.tiles.map((row) => row.map((t) => ({ ...t })));
       this.buildings = saved.buildings.map((b) => ({ ...b }));
       this.nextBuildingId = saved.nextBuildingId;
@@ -63,10 +64,10 @@ export class GameState {
       this.gameSpeed = 1;
       this.activeEvents = [];
       this.lastEventTick = saved.totalTicks;
-      this.researchedTechs = [...saved.researchedTechs];
+      this.researchedTechs = Array.isArray(saved.researchedTechs) ? [...saved.researchedTechs] : [];
       this.researchTarget = saved.researchTarget;
-      this.researchProgress = saved.researchProgress;
-      this.eventLog = saved.eventLog ? [...saved.eventLog] : [];
+      this.researchProgress = saved.researchProgress ?? 0;
+      this.eventLog = Array.isArray(saved.eventLog) ? [...saved.eventLog] : [];
     } else {
       this.resources = { ...STARTING_RESOURCES };
       this.tiles = [];
@@ -434,6 +435,7 @@ export class GameState {
 
   toSaveData(): SaveData {
     return {
+      version: SAVE_VERSION,
       resources: { ...this.resources },
       tiles: this.tiles.map((row) => row.map((t) => ({ ...t }))),
       buildings: this.buildings.map((b) => ({ ...b })),

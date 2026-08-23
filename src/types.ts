@@ -157,6 +157,7 @@ export interface TradeOffer {
 }
 
 export interface SaveData {
+  version: number;
   resources: Resources;
   tiles: Tile[][];
   buildings: PlacedBuilding[];

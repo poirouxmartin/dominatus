@@ -68,19 +68,24 @@ export class TitleScene extends Phaser.Scene {
 
     const hasSave = GameState.hasSave();
 
-    const startText = this.add.text(width / 2, height / 2 + 90, hasSave ? "[ New Game ]" : "[ Click to Begin ]", {
-      fontSize: "14px",
+    const startText = this.add.text(width / 2, height / 2 + 90, hasSave ? "[ NEW GAME ]" : "[ CLICK TO BEGIN ]", {
+      fontSize: "18px",
       fontFamily: "'Courier New', monospace",
-      color: "#888888",
+      color: "#c9a84c",
+      fontStyle: "bold",
     });
     startText.setOrigin(0.5);
     startText.setInteractive({ useHandCursor: true });
+    startText.setAlpha(0);
+    this.tweens.add({ targets: startText, alpha: 1, duration: 800, delay: 400 });
     this.tweens.add({
       targets: startText,
-      alpha: { from: 0.4, to: 1 },
-      duration: 1200,
+      scale: { from: 1, to: 1.06 },
+      duration: 900,
       yoyo: true,
       repeat: -1,
+      ease: "Sine.easeInOut",
+      delay: 1200,
     });
 
     startText.on("pointerdown", () => {
@@ -91,16 +96,26 @@ export class TitleScene extends Phaser.Scene {
       });
     });
 
+    startText.on("pointerover", () => {
+      startText.setColor("#f0d070");
+    });
+    startText.on("pointerout", () => {
+      startText.setColor("#c9a84c");
+    });
+
     if (hasSave) {
-      const loadText = this.add.text(width / 2, height / 2 + 120, "[ Load Game ]", {
-        fontSize: "14px",
+      const loadText = this.add.text(width / 2, height / 2 + 122, "[ Load Game ]", {
+        fontSize: "13px",
         fontFamily: "'Courier New', monospace",
-        color: "#c9a84c",
+        color: "#8a7a5a",
       });
       loadText.setOrigin(0.5);
       loadText.setInteractive({ useHandCursor: true });
       loadText.setAlpha(0);
-      this.tweens.add({ targets: loadText, alpha: 1, duration: 1000, delay: 800 });
+      this.tweens.add({ targets: loadText, alpha: 1, duration: 1000, delay: 900 });
+
+      loadText.on("pointerover", () => loadText.setColor("#c9a84c"));
+      loadText.on("pointerout", () => loadText.setColor("#8a7a5a"));
 
       loadText.on("pointerdown", () => {
         this.cameras.main.fadeOut(600, 15, 15, 30);
