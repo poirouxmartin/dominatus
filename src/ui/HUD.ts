@@ -117,14 +117,14 @@ export class HUD {
     });
     this.container.add(this.tierText);
 
-    this.happinessText = scene.add.text(xOff + 310, 13, "", {
+    this.happinessText = scene.add.text(xOff + 330, 13, "", {
       fontSize: "12px",
       fontFamily: "'Courier New', monospace",
       color: "#e8e0d0",
     });
     this.container.add(this.happinessText);
 
-    this.defenseText = scene.add.text(xOff + 396, 14, "", {
+    this.defenseText = scene.add.text(xOff + 416, 14, "", {
       fontSize: "10px",
       fontFamily: "'Courier New', monospace",
       color: "#d9534f",
@@ -154,6 +154,7 @@ export class HUD {
       backgroundColor: "#0f0f1eDD",
       padding: { x: 6, y: 3 },
     });
+    this.researchInfoText.setVisible(false);
     this.container.add(this.researchInfoText);
 
     this.alertText = scene.add.text(12, 68, "", {
@@ -163,6 +164,7 @@ export class HUD {
       backgroundColor: "#1a0f0fDD",
       padding: { x: 6, y: 3 },
     });
+    this.alertText.setVisible(false);
     this.container.add(this.alertText);
 
     this.container.setDepth(100);
@@ -222,9 +224,11 @@ export class HUD {
       if (techDef) {
         const pct = Math.floor((state.researchProgress / techDef.cost) * 100);
         this.researchInfoText.setText(`\u{1F4D6} ${techDef.name}: ${pct}%`);
+        this.researchInfoText.setVisible(true);
       }
     } else {
       this.researchInfoText.setText("");
+      this.researchInfoText.setVisible(false);
     }
 
     const alerts: string[] = [];
@@ -233,6 +237,7 @@ export class HUD {
     if (state.resources[ResourceType.Stone] < 10 && state.buildings.length > 3) alerts.push("LOW STONE");
     if (state.population.happiness < 30) alerts.push("UNHAPPY");
     this.alertText.setText(alerts.length > 0 ? "\u26A0 " + alerts.join("  \u2022  ") : "");
+    this.alertText.setVisible(alerts.length > 0);
 
     for (const t of this.eventTexts) t.destroy();
     this.eventTexts = [];

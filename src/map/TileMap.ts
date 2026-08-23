@@ -289,7 +289,7 @@ export class TileMap {
     this.hoverHighlight.setVisible(false);
     this.container.add(this.hoverHighlight);
 
-    this.minimapContainer = scene.add.container(1280 - GRID_COLS * 4 - 12, 720 - GRID_ROWS * 4 - 12);
+    this.minimapContainer = scene.add.container(1280 - GRID_COLS * 4 - 12, 652 - GRID_ROWS * 4 - 8);
     const mmBg = scene.add.rectangle(GRID_COLS * 2, GRID_ROWS * 2, GRID_COLS * 4 + 4, GRID_ROWS * 4 + 4, 0x0f0f1e, 0.85);
     mmBg.setStrokeStyle(1, 0xc9a84c, 0.4);
     this.minimapContainer.add(mmBg);
