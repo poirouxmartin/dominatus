@@ -80,13 +80,44 @@ function runPlaythrough(seed: number): RunReport {
     s.processEvents();
   };
 
-  const RESEARCH_ORDER = [
-    "philosophy", "writing", "currency", "irrigation", "democracy",
-    "theology", "masonry", "engineering", "law", "trade_fleet",
-    "metallurgy", "advanced_carpentry", "conscription", "fortification",
-    "crop_rotation", "selective_breeding", "banking",
-  ];
-  const BUILD_PRIORITY: { type: BuildingType; tile: TileType | null; max: (s: GameState) => number }[] = [
+const MONUMENT = process.env.MONUMENT === "1";
+
+const RESEARCH_ORDER = MONUMENT
+  ? [
+      "philosophy", "currency", "writing", "masonry", "engineering",
+      "democracy", "irrigation", "theology", "law", "trade_fleet",
+      "metallurgy", "advanced_carpentry", "conscription", "fortification",
+      "crop_rotation", "selective_breeding", "banking",
+    ]
+  : [
+      "philosophy", "writing", "currency", "irrigation", "democracy",
+      "theology", "masonry", "engineering", "law", "trade_fleet",
+      "metallurgy", "advanced_carpentry", "conscription", "fortification",
+      "crop_rotation", "selective_breeding", "banking",
+    ];
+
+const BUILD_PRIORITY: { type: BuildingType; tile: TileType | null; max: (s: GameState) => number }[] = MONUMENT
+  ? [
+      { type: BuildingType.House, tile: TileType.Grass, max: (st) => Math.min(14, 4 + Math.floor(st.population.total / 3)) },
+      { type: BuildingType.Farm, tile: TileType.Farmable, max: () => 5 },
+      { type: BuildingType.LumberMill, tile: TileType.Forest, max: () => 3 },
+      { type: BuildingType.Well, tile: TileType.Grass, max: (st) => Math.ceil(st.population.total / 4) },
+      { type: BuildingType.Market, tile: TileType.Grass, max: () => 1 },
+      { type: BuildingType.TradingPost, tile: TileType.Grass, max: () => 1 },
+      { type: BuildingType.Vineyard, tile: TileType.Farmable, max: () => 4 },
+      { type: BuildingType.Warehouse, tile: TileType.Grass, max: () => 4 },
+      { type: BuildingType.Quarry, tile: TileType.Mountain, max: () => 3 },
+      { type: BuildingType.Brickyard, tile: TileType.Grass, max: () => 2 },
+      { type: BuildingType.Forge, tile: TileType.Grass, max: () => 2 },
+      { type: BuildingType.Tannery, tile: TileType.Grass, max: () => 2 },
+      { type: BuildingType.Bathhouse, tile: TileType.Grass, max: () => 3 },
+      { type: BuildingType.Temple, tile: TileType.Grass, max: () => 2 },
+      { type: BuildingType.Amphitheater, tile: TileType.Grass, max: () => 2 },
+      { type: BuildingType.Aqueduct, tile: TileType.Grass, max: (st) => Math.ceil(st.population.total / 8) },
+      { type: BuildingType.Library, tile: TileType.Grass, max: () => 2 },
+      { type: BuildingType.CircusMaximus, tile: TileType.Grass, max: () => 1 },
+    ]
+  : [
     { type: BuildingType.House, tile: TileType.Grass, max: (st) => Math.min(14, 4 + Math.floor(st.population.total / 3)) },
     { type: BuildingType.Farm, tile: TileType.Farmable, max: () => 6 },
     { type: BuildingType.LumberMill, tile: TileType.Forest, max: () => 2 },
