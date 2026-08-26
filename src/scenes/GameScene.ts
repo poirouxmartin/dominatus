@@ -541,6 +541,17 @@ export class GameScene extends Phaser.Scene {
         this.state.victory = true;
       }
 
+      // voie alternative : le monument + des colons heureux
+      const hasCircus = this.state.buildings.some((b) => b.type === BuildingType.CircusMaximus);
+      if (
+        hasCircus &&
+        this.state.population.total >= 25 &&
+        this.state.population.happiness >= 75 &&
+        this.state.researchedTechs.length >= 8
+      ) {
+        this.state.victory = true;
+      }
+
       this.autoSaveCounter++;
       if (this.autoSaveCounter >= 60) {
         this.autoSaveCounter = 0;
@@ -584,8 +595,9 @@ export class GameScene extends Phaser.Scene {
         this.endShown = true;
         this.prevSpeed = 1;
         this.state.gameSpeed = 0;
+        const hasCircusWin = this.state.victory && this.state.buildings.some((b) => b.type === BuildingType.CircusMaximus);
         AudioManager.inst.playEndTheme(this.state.victory);
-        this.hud?.showEndScreen(this.state, this.state.victory);
+        this.hud?.showEndScreen(this.state, this.state.victory, hasCircusWin ? "monument" : undefined);
       }
 
       if (this.techPanel?.visible) {

@@ -764,7 +764,9 @@ export class HUD {
       const settlers = Math.min(40, Math.floor(state.population.total));
       const techs = Math.min(14, state.researchedTechs.length);
       this.objectiveText.setX(Viewport.w - 22);
-      this.objectiveText.setText(`\u25B6  WIN \u2014 settlers ${settlers}/40 \u00b7 technologies ${techs}/14`);
+      this.objectiveText.setText(
+        `\u25B6  WIN \u2014 settlers ${settlers}/40 \u00b7 techs ${techs}/14  OR  Circus + 25 happy settlers`
+      );
     } else {
       this.objectiveText.setX(Viewport.w - 22);
       this.objectiveText.setText(`\u25B6  ${OBJECTIVES[idx].text}`);
@@ -1245,7 +1247,7 @@ export class HUD {
   }
 
   /** Écran de fin de partie (victoire ou défaite). */
-  showEndScreen(state: GameState, victory: boolean): void {
+  showEndScreen(state: GameState, victory: boolean, reason?: "monument"): void {
     if (this.endPanel) return;
     const c = (this.endPanel = this.scene.add.container(0, 0));
     const cx = Viewport.w / 2;
@@ -1277,7 +1279,9 @@ export class HUD {
     );
 
     const flavor = victory
-      ? "Your province stands among the great powers.\nHistory will remember Dominatus."
+      ? reason === "monument"
+        ? "The Circus Maximus roars in your honor.\nRome itself bows to Dominatus."
+        : "Your province stands among the great powers.\nHistory will remember Dominatus."
       : "The last settler has fallen.\nThe ruins will outlive the name.";
     c.add(
       label(this.scene, cx, cy - H / 2 + 118, flavor, {
