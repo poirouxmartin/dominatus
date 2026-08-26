@@ -612,6 +612,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     requiredTile: TileType.Water,
     color: 0x6a8a5a,
   },
+  [BuildingType.Temple]: {
+    type: BuildingType.Temple,
+    name: "Temple",
+    description: "House of the gods. +35 happiness (+12 each extra) and +2 research per tick \u2014 priests are scribes.",
+    cost: { [ResourceType.Stone]: 50, [ResourceType.Planks]: 20, [ResourceType.Gold]: 30 },
+    production: {
+      input: {},
+      output: { [ResourceType.Research]: 2 },
+      ticksPerCycle: 1,
+    },
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    requiredTech: "theology",
+    color: 0xd8cdb8,
+  },
   [BuildingType.Forester]: {
     type: BuildingType.Forester,
     name: "Forester",

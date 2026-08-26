@@ -50,7 +50,7 @@ const CATEGORIES: { key: string; label: string; types: BuildingType[] }[] = [
   {
     key: "village",
     label: "VILLAGE",
-    types: [BuildingType.House, BuildingType.Farm, BuildingType.Fishery, BuildingType.Well, BuildingType.Bathhouse, BuildingType.Garden, BuildingType.Chapel],
+    types: [BuildingType.House, BuildingType.Farm, BuildingType.Fishery, BuildingType.Well, BuildingType.Bathhouse, BuildingType.Garden, BuildingType.Chapel, BuildingType.Temple],
   },
   {
     key: "production",
@@ -366,6 +366,8 @@ export class BuildPanel {
         prodLine = "-5 gold/5t \u2192 +20 happiness (+8 each extra, while funded)";
       } else if (type === BuildingType.Barracks) {
         prodLine = "-1 tool, -1 leather/5t \u2192 +10% raid defense each";
+      } else if (type === BuildingType.Temple) {
+        prodLine = "+2 research/t \u00b7 Happiness: +35 first, +12 each extra";
       }
     } else if (def.populationCapacity > 0) {
       prodLine = `Houses ${def.populationCapacity} settlers`;
