@@ -5,7 +5,7 @@
  */
 const puppeteer = require("puppeteer-core");
 
-const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const CHROME = process.env.SMOKE_CHROME || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const URL = process.env.SMOKE_URL || "http://localhost:5174/";
 const W = 1473;
 const H = 783;
