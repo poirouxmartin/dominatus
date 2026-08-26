@@ -9,7 +9,7 @@ import {
   hexCorners,
   neighbors as hexNeighbors,
 } from "./hex";
-import { Viewport, C } from "../ui/theme";
+import { Viewport, C, RenderScale } from "../ui/theme";
 
 type RGB = { r: number; g: number; b: number };
 interface Corner {
@@ -703,8 +703,29 @@ export class TileMap {
     this.terrainGfx = scene.add.graphics();
     this.detailGfx = scene.add.graphics();
     this.buildingGfx = scene.add.graphics();
+    this.barsGfx = scene.add.graphics();
     this.overlayGfx = scene.add.graphics();
-    this.container.add([this.terrainGfx, this.detailGfx, this.buildingGfx, this.overlayGfx]);
+    this.container.add([this.terrainGfx, this.detailGfx, this.buildingGfx, this.barsGfx, this.overlayGfx]);
+  }
+
+  /** Baking : fige une couche Graphics en texture haute résolution (rendu = 1 draw). */
+  private bake(key: "wx-terrain" | "wx-detail" | "wx-build", g: Phaser.GameObjects.Graphics): void {
+    if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
+    g.setScale(this.rs);
+    g.generateTexture(key, Math.ceil(MAP_W * this.rs) + 8, Math.ceil(MAP_H * this.rs) + 8);
+    g.setScale(1);
+    g.setVisible(false);
+
+    let img = this.bakedImages[key];
+    if (!img) {
+      img = this.scene.add.image(0, 0, key).setOrigin(0);
+      this.container.add(img);
+      this.bakedImages[key] = img;
+    } else {
+      img.setTexture(key);
+    }
+    img.setScale(1 / this.rs);
+    img.setVisible(true);
   }
 
   private shadowPlate(): void {
@@ -793,6 +814,9 @@ export class TileMap {
   private ui?: Phaser.Scene;
   private lastTerrainSig = "";
   private lastBuildingSig = "";
+  private rs = RenderScale.value;
+  private bakedImages: Partial<Record<"wx-terrain" | "wx-detail" | "wx-build", Phaser.GameObjects.Image>> = {};
+  private barsGfx!: Phaser.GameObjects.Graphics;
 
   private centerCameraOnMinimap(lx: number, ly: number): void {
     const cam = this.scene.cameras.main;
@@ -1054,27 +1078,6 @@ export class TileMap {
       g.fillEllipse(cx + 2, cy + 11, 34, 9);
       const painter = BUILDING_PAINTERS[building.type];
       if (painter) painter(g, cx, cy);
-
-      // barre de progression du cycle de production (rouge si entrante manquante)
-      const def = BUILDINGS[building.type];
-      let cycle = 0;
-      let blocked = false;
-      if (building.active) {
-        if (def.production) {
-          cycle = def.production.ticksPerCycle;
-          for (const [res, amt] of Object.entries(def.production.input)) {
-            if (amt && state.resources[res as keyof typeof state.resources] < amt) blocked = true;
-          }
-        } else if (building.type === BuildingType.Forester) cycle = 5;
-        else if (building.type === BuildingType.HuntingCabin) cycle = 4;
-      }
-      if (cycle > 0) {
-        const p = Math.min(1, building.productionTimer / cycle);
-        g.fillStyle(0x000000, 0.45);
-        g.fillRoundedRect(cx - 9, cy + 14, 18, 3.5, 1.75);
-        g.fillStyle(blocked ? 0xd4645a : 0xc9a84c, 0.9);
-        g.fillRoundedRect(cx - 9, cy + 14, Math.max(1.5, 18 * p), 3.5, 1.75);
-      }
     }
   }
 
@@ -1082,6 +1085,11 @@ export class TileMap {
 
   sync(state: GameState): void {
     this.currentSeason = state.season;
+    if (this.rs !== RenderScale.value) {
+      this.rs = RenderScale.value;
+      this.lastTerrainSig = "";
+      this.lastBuildingSig = "";
+    }
 
     const terrainSig =
       state.season +
@@ -1102,6 +1110,8 @@ export class TileMap {
         }
       }
       this.drawDecorations(state);
+      this.bake("wx-terrain", this.terrainGfx);
+      this.bake("wx-detail", this.detailGfx);
       this.updateMinimap(state);
     }
 
@@ -1109,10 +1119,40 @@ export class TileMap {
     if (buildingSig !== this.lastBuildingSig) {
       this.lastBuildingSig = buildingSig;
       this.drawBuildings(state);
+      this.bake("wx-build", this.buildingGfx);
       this.updateMinimap(state);
     }
 
+    this.drawProductionBars(state);
+    this.container.bringToTop(this.barsGfx);
     this.container.bringToTop(this.overlayGfx);
+  }
+
+  private drawProductionBars(state: GameState): void {
+    const g = this.barsGfx;
+    g.clear();
+    for (const building of state.buildings) {
+      const def = BUILDINGS[building.type];
+      let cycle = 0;
+      let blocked = false;
+      if (building.active) {
+        if (def.production) {
+          cycle = def.production.ticksPerCycle;
+          for (const [res, amt] of Object.entries(def.production.input)) {
+            if (amt && state.resources[res as keyof typeof state.resources] < amt) blocked = true;
+          }
+        } else if (building.type === BuildingType.Forester) cycle = 5;
+        else if (building.type === BuildingType.HuntingCabin) cycle = 4;
+      }
+      if (cycle > 0) {
+        const { x: cx, y: cy } = hexCenter(building.gridX, building.gridY);
+        const p = Math.min(1, building.productionTimer / cycle);
+        g.fillStyle(0x000000, 0.45);
+        g.fillRoundedRect(cx - 9, cy + 14, 18, 3.5, 1.75);
+        g.fillStyle(blocked ? 0xd4645a : 0xc9a84c, 0.9);
+        g.fillRoundedRect(cx - 9, cy + 14, Math.max(1.5, 18 * p), 3.5, 1.75);
+      }
+    }
   }
 
   private updateMinimap(state: GameState): void {
@@ -1181,5 +1221,8 @@ export class TileMap {
   destroy(): void {
     this.container.destroy();
     this.minimapContainer?.destroy();
+    for (const key of ["wx-terrain", "wx-detail", "wx-build"] as const) {
+      if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
+    }
   }
 }
