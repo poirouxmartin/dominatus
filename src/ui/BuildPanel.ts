@@ -70,7 +70,7 @@ const CATEGORIES: { key: string; label: string; types: BuildingType[] }[] = [
   {
     key: "trade",
     label: "COMMERCE",
-    types: [BuildingType.Warehouse, BuildingType.Market, BuildingType.TradingPost, BuildingType.Inn, BuildingType.Tavern],
+    types: [BuildingType.Warehouse, BuildingType.Market, BuildingType.TradingPost, BuildingType.Amphitheater, BuildingType.Inn, BuildingType.Tavern],
   },
   {
     key: "knowledge",
@@ -362,6 +362,8 @@ export class BuildPanel {
       prodLine = `${inStr ? inStr + "  \u2192  " : ""}${outStr}   (${def.production.ticksPerCycle}t)`;
       if (type === BuildingType.Bathhouse) {
         prodLine = "-2 water/t each \u2192 +12 happiness (while supplied)";
+      } else if (type === BuildingType.Amphitheater) {
+        prodLine = "-5 gold/5t \u2192 +20 happiness (+8 each extra, while funded)";
       }
     } else if (def.populationCapacity > 0) {
       prodLine = `Houses ${def.populationCapacity} settlers`;

@@ -495,6 +495,29 @@ const BUILDING_PAINTERS: Record<BuildingType, Painter> = {
     g.fillStyle(BP.waterBlue, 0.8);
     g.fillEllipse(cx - 9, cy + 9, 6, 2);
   },
+
+  [BuildingType.Amphitheater]: (g, cx, cy) => {
+    g.fillStyle(0x000000, 0.15);
+    g.fillEllipse(cx, cy + 10, 34, 10);
+    g.fillStyle(BP.stoneDk, 1);
+    g.fillEllipse(cx, cy, 32, 20);
+    g.fillStyle(BP.stone, 1);
+    g.fillEllipse(cx, cy - 1, 30, 18);
+    g.fillStyle(0xd8b878, 1);
+    g.fillEllipse(cx, cy - 1, 18, 10);
+    g.lineStyle(1.5, BP.stoneDk, 0.8);
+    g.strokeEllipse(cx, cy - 1, 18, 10);
+    for (const a of [0, 60, 120, 180, 240, 300]) {
+      const rad = (a * Math.PI) / 180;
+      g.fillStyle(BP.stoneDk, 0.9);
+      g.fillCircle(cx + Math.cos(rad) * 14, cy - 1 + Math.sin(rad) * 8, 1.6);
+    }
+    g.fillStyle(BP.canvasRed, 0.9);
+    g.fillRect(cx - 1, cy - 3, 2, 2);
+    g.fillStyle(BP.stone, 1);
+    g.fillRect(cx - 16, cy - 6, 3, 3);
+    g.fillRect(cx + 13, cy - 6, 3, 3);
+  },
 };
 
 const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
@@ -522,6 +545,7 @@ const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
   [BuildingType.Chapel]: 0xd8cdb8,
   [BuildingType.Aqueduct]: 0x9aa0aa,
   [BuildingType.Bathhouse]: 0xc9b884,
+  [BuildingType.Amphitheater]: 0xd0a878,
 };
 
 export class TileMap {

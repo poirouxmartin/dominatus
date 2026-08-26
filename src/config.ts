@@ -561,6 +561,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     requiredTech: "currency",
     color: 0xc9b884,
   },
+  [BuildingType.Amphitheater]: {
+    type: BuildingType.Amphitheater,
+    name: "Amphitheater",
+    description: "Games for the masses! +20 happiness (+8 each extra) \u2014 consumes 5 gold per 5 ticks.",
+    cost: { [ResourceType.Stone]: 60, [ResourceType.Bricks]: 30, [ResourceType.Planks]: 20 },
+    production: {
+      input: { [ResourceType.Gold]: 5 },
+      output: {},
+      ticksPerCycle: 5,
+    },
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    requiredTech: "democracy",
+    color: 0xd0a878,
+  },
   [BuildingType.Forester]: {
     type: BuildingType.Forester,
     name: "Forester",

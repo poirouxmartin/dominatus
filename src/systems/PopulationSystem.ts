@@ -25,6 +25,7 @@ export class PopulationSystem {
     let chapelCount = 0;
     let tavernCount = 0;
     let bathhouseCount = 0;
+    let amphitheaterCount = 0;
 
     for (const b of state.buildings) {
       const def = BUILDINGS[b.type];
@@ -37,6 +38,7 @@ export class PopulationSystem {
       if (b.type === BuildingType.Chapel) chapelCount++;
       if (b.type === BuildingType.Tavern) tavernCount++;
       if (b.type === BuildingType.Bathhouse) bathhouseCount++;
+      if (b.type === BuildingType.Amphitheater) amphitheaterCount++;
     }
 
     const foodMultiplier = state.population.tier >= 2 ? CITIZEN_FOOD_MULTIPLIER : 1;
@@ -56,8 +58,13 @@ export class PopulationSystem {
     if (bathhouseCount > 0 && state.resources[ResourceType.Water] >= bathhouseCount * 2) {
       bathHappy = bathhouseCount * 12;
     }
-    const extraParts: [string, number][] =
-      bathHappy > 0 ? [["Bathhouses \u00d7" + bathhouseCount, bathHappy]] : [];
+    let arenaHappy = 0;
+    if (amphitheaterCount > 0 && state.resources[ResourceType.Gold] >= amphitheaterCount * 5) {
+      arenaHappy = 20 + (amphitheaterCount - 1) * 8;
+    }
+    const extraParts: [string, number][] = [];
+    if (bathHappy > 0) extraParts.push(["Bathhouses \u00d7" + bathhouseCount, bathHappy]);
+    if (arenaHappy > 0) extraParts.push(["Amphitheaters \u00d7" + amphitheaterCount, arenaHappy]);
     const happiness = state.computeHappiness(hasEnoughFood, hasWater, capacity, extraParts).total;
     state.population.happiness = happiness;
 
