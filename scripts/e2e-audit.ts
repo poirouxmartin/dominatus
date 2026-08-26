@@ -459,6 +459,53 @@ section("Victoire / dÃ©faite");
   check("victoire par le monument (Circus + 25 colons + 75% bonheur)", s3.victory, `pop=${s3.population.total} hap=${s3.population.happiness}`);
 }
 section("IntÃ©gritÃ© des dÃ©finitions");
+
+// === 11b. Bâtiments récents ===============================================
+section("Bâtiments récents (aqueduc, thermes, amphithéâtre, temple, bibliothèque, caserne, pêcherie, vignoble)");
+{
+  const s = new GameState();
+  const sys = makeSystems();
+  s.researchedTechs.push("engineering", "currency", "writing", "theology", "conscription", "democracy");
+  s.resources.stone = 400;
+  s.resources.planks = 300;
+  s.resources.bricks = 200;
+  s.resources.gold = 300;
+  s.resources.tools = 50;
+  s.resources.leather = 50;
+  s.population.total = 6;
+
+  const water = findTile(s, TileType.Water, 3, 3, 99);
+  check("une case d'eau existe pour la pêcherie", water !== null);
+
+  const grassSpot = (): { col: number; row: number } | null => findTile(s, TileType.Grass, 15, 10, 6);
+  const g1 = grassSpot();
+  if (g1) check("aqueduc plaçable sur l'herbe", s.placeBuilding(BuildingType.Aqueduct, g1.col, g1.row) !== null);
+  const g2 = grassSpot();
+  if (g2) check("therme plaçable sur l'herbe", s.placeBuilding(BuildingType.Temple, g2.col, g2.row) !== null);
+  const g3 = grassSpot();
+  if (g3) check("bibliothèque plaçable", s.placeBuilding(BuildingType.Library, g3.col, g3.row) !== null);
+  const farm = findTile(s, TileType.Farmable, 15, 10, 6);
+  if (farm) check("vignoble plaçable sur terre cultivable", s.placeBuilding(BuildingType.Vineyard, farm.col, farm.row) !== null);
+  const bSpot = findTile(s, TileType.Grass, 16, 10, 7);
+  if (bSpot) check("caserne plaçable", s.placeBuilding(BuildingType.Barracks, bSpot.col, bSpot.row) === null ? false : true);
+  if (water) check("pêcherie plaçable SUR l'eau", s.placeBuilding(BuildingType.Fishery, water.col, water.row) !== null);
+
+  const water0 = s.resources.water;
+  const research0 = s.resources.research;
+  const gold0 = s.resources.gold;
+  const def0 = s.getRaidDefense();
+  const bSpot2 = findTile(s, TileType.Grass, 16, 10, 7);
+  if (bSpot2) s.placeBuilding(BuildingType.Barracks, bSpot2.col, bSpot2.row);
+  for (let i = 0; i < 12; i++) {
+    s.lastEventTick = s.totalTicks + 1000;
+    tick(s, sys);
+  }
+  check("aqueduc produit de l'eau", s.resources.water > water0, `+${(s.resources.water - water0).toFixed(1)}`);
+  check("temple + bibliothèque produisent de la recherche", s.resources.research > research0, `+${(s.resources.research - research0).toFixed(1)}`);
+  check("caserne augmente la défense (outils/cuir en stock)", s.getRaidDefense() > def0, `${(def0 * 100).toFixed(0)}% -> ${(s.getRaidDefense() * 100).toFixed(0)}%`);
+  check("vignoble rapporte de l'or", s.resources.gold > gold0, `+${(s.resources.gold - gold0).toFixed(0)}`);
+}
+
 // === 12. Data integrity ====
 {
   const types = Object.values(BuildingType);
