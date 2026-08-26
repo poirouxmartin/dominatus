@@ -57,6 +57,9 @@ export enum EventType {
   Festival = "festival",
   Plague = "plague",
   Raid = "raid",
+  Harvest = "harvest",
+  Settlers = "settlers",
+  Merchant = "merchant",
 }
 
 export enum TechBranch {

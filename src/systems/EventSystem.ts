@@ -1,6 +1,6 @@
 import { GameState } from "../state/GameState";
-import { EventType, GameEvent, ResourceType } from "../types";
-import { EVENT_CHECK_INTERVAL, EVENT_CHANCE, RAID_MIN_POP, RAID_BASE_DAMAGE } from "../config";
+import { BuildingType, EventType, GameEvent, ResourceType, Season } from "../types";
+import { BUILDINGS, EVENT_CHECK_INTERVAL, EVENT_CHANCE, RAID_MIN_POP, RAID_BASE_DAMAGE } from "../config";
 
 export class EventSystem {
   update(state: GameState): void {
@@ -10,17 +10,76 @@ export class EventSystem {
     if (Math.random() > EVENT_CHANCE) return;
 
     const roll = Math.random();
-    if (roll < 0.22) {
+    if (roll < 0.16) {
       this.triggerStorm(state);
-    } else if (roll < 0.44) {
+    } else if (roll < 0.32) {
       this.triggerCaravan(state);
-    } else if (roll < 0.66) {
+    } else if (roll < 0.46) {
       this.triggerFestival(state);
-    } else if (roll < 0.84) {
+    } else if (roll < 0.58) {
       this.triggerPlague(state);
-    } else {
+    } else if (roll < 0.72) {
       this.triggerRaid(state);
+    } else if (roll < 0.84) {
+      this.triggerHarvest(state);
+    } else if (roll < 0.93) {
+      this.triggerWanderers(state);
+    } else {
+      this.triggerMerchant(state);
     }
+  }
+
+  /** Récolte exceptionnelle : printemps/été uniquement, sinon caravane. */
+  private triggerHarvest(state: GameState): void {
+    if (state.season === Season.Spring || state.season === Season.Summer) {
+      state.addEvent({
+        type: EventType.Harvest,
+        message: "Bumper harvest! +30 food",
+        tickRemaining: 1,
+        effect: (s: GameState) => {
+          s.addResources({ [ResourceType.Food]: 30 });
+        },
+      });
+    } else {
+      this.triggerCaravan(state);
+    }
+  }
+
+  /** Colons errants : seulement s'il reste de la place pour loger. */
+  private triggerWanderers(state: GameState): void {
+    const cap = state.buildings.reduce((sum, b) => sum + BUILDINGS[b.type].populationCapacity, 0);
+    if (state.population.total >= cap) {
+      this.triggerFestival(state);
+      return;
+    }
+    const joined = Math.min(3, cap - Math.ceil(state.population.total));
+    state.addEvent({
+      type: EventType.Settlers,
+      message: `Wandering settlers join your province! +${joined} settlers`,
+      tickRemaining: 1,
+      effect: (s: GameState) => {
+        s.population.total = Math.min(cap, s.population.total + joined);
+      },
+    });
+  }
+
+  /** Marchand de passage : échange bois contre or, seulement si on peut payer. */
+  private triggerMerchant(state: GameState): void {
+    if (state.resources[ResourceType.Gold] < 20) {
+      this.triggerCaravan(state);
+      return;
+    }
+    state.addEvent({
+      type: EventType.Merchant,
+      message: "A traveling merchant trades: -20 gold, +25 wood",
+      tickRemaining: 1,
+      effect: (s: GameState) => {
+        if (s.resources[ResourceType.Gold] >= 20) {
+          s.resources[ResourceType.Gold] -= 20;
+          s.addResources({ [ResourceType.Wood]: 25 });
+        }
+      },
+    });
   }
 
   private triggerStorm(state: GameState): void {

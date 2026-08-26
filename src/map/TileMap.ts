@@ -1,505 +1,987 @@
 import Phaser from "phaser";
 import { GameState } from "../state/GameState";
 import { TileType, BuildingType, Season } from "../types";
-import { TILE_SIZE, GRID_COLS, GRID_ROWS, BUILDINGS } from "../config";
+import { GRID_COLS, GRID_ROWS, BUILDINGS } from "../config";
+import {
+  MAP_W,
+  MAP_H,
+  hexCenter,
+  hexCorners,
+  neighbors as hexNeighbors,
+} from "./hex";
+import { Viewport, C } from "../ui/theme";
 
-const TILE_BASE: Record<TileType, { r: number; g: number; b: number }> = {
-  [TileType.Grass]: { r: 74, g: 122, b: 58 },
-  [TileType.Forest]: { r: 45, g: 90, b: 37 },
-  [TileType.Water]: { r: 42, g: 106, b: 156 },
-  [TileType.Mountain]: { r: 122, g: 122, b: 122 },
-  [TileType.Farmable]: { r: 90, g: 138, b: 58 },
+type RGB = { r: number; g: number; b: number };
+interface Corner {
+  x: number;
+  y: number;
+}
+
+const TERRAIN_BASE: Record<TileType, RGB> = {
+  [TileType.Grass]: { r: 122, g: 140, b: 80 },
+  [TileType.Forest]: { r: 72, g: 94, b: 58 },
+  [TileType.Water]: { r: 46, g: 92, b: 112 },
+  [TileType.Mountain]: { r: 146, g: 137, b: 120 },
+  [TileType.Farmable]: { r: 158, g: 138, b: 82 },
 };
 
-const SEASON_TINT: Record<Season, { r: number; g: number; b: number }> = {
-  [Season.Spring]: { r: 10, g: 8, b: 0 },
-  [Season.Summer]: { r: 0, g: 0, b: -10 },
-  [Season.Autumn]: { r: 15, g: -10, b: -15 },
-  [Season.Winter]: { r: -20, g: -15, b: 10 },
+const TREE_CANOPY: Record<Season, number> = {
+  [Season.Spring]: 0x5a7844,
+  [Season.Summer]: 0x4c6c3a,
+  [Season.Autumn]: 0x8a743c,
+  [Season.Winter]: 0x72806e,
 };
 
-const TREE_COLORS: Record<Season, number> = {
-  [Season.Spring]: 0x4d8f3c,
-  [Season.Summer]: 0x3f7f33,
-  [Season.Autumn]: 0xbf7a2e,
-  [Season.Winter]: 0x86988a,
-};
+const CYPRESS = 0x3c5a3a;
+const CYPRESS_DK = 0x2e462e;
+
+// arêtes partagées par direction voisin : E, NE, NW, W, SW, SE
+const DIR_EDGES: [number, number][] = [
+  [0, 1],
+  [5, 0],
+  [4, 5],
+  [3, 4],
+  [2, 3],
+  [1, 2],
+];
+
+function clamp(v: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function mix(a: RGB, b: RGB, t: number): RGB {
+  return { r: a.r + (b.r - a.r) * t, g: a.g + (b.g - a.g) * t, b: a.b + (b.b - a.b) * t };
+}
+
+function applySeason(base: RGB, season: Season): RGB {
+  switch (season) {
+    case Season.Spring:
+      return { r: base.r + 4, g: base.g + 6, b: base.b };
+    case Season.Summer:
+      return { r: base.r + 6, g: base.g + 2, b: base.b - 8 };
+    case Season.Autumn:
+      return { r: base.r + 16, g: base.g - 4, b: base.b - 16 };
+    case Season.Winter:
+      return mix(base, { r: 208, g: 214, b: 222 }, 0.52);
+  }
+}
+
+function rgbInt(c: RGB): number {
+  return (clamp(Math.round(c.r), 0, 255) << 16) | (clamp(Math.round(c.g), 0, 255) << 8) | clamp(Math.round(c.b), 0, 255);
+}
 
 function tileColor(type: TileType, x: number, y: number, season: Season): number {
-  const base = TILE_BASE[type];
-  const noise = ((x * 7 + y * 13) % 17) / 17;
-  const variation = Math.floor((noise - 0.5) * 16);
-  const tint = SEASON_TINT[season];
-
-  const r = Phaser.Math.Clamp(base.r + variation + tint.r, 0, 255);
-  const g = Phaser.Math.Clamp(base.g + variation + tint.g, 0, 255);
-  const b = Phaser.Math.Clamp(base.b + variation + tint.b, 0, 255);
-
-  return (r << 16) | (g << 8) | b;
+  let c = applySeason(TERRAIN_BASE[type], season);
+  if (type === TileType.Water && season === Season.Winter) {
+    c = mix(c, { r: 150, g: 180, b: 205 }, 0.25);
+  }
+  const n = ((x * 73856093) ^ (y * 19349663)) % 100;
+  const v = ((n < 0 ? -n : n) % 11) - 5;
+  return rgbInt({ r: c.r + v, g: c.g + v, b: c.b + v * 0.8 });
 }
 
-interface BuildingVisual {
-  type: BuildingType;
-  draw: (scene: Phaser.Scene, cx: number, cy: number) => Phaser.GameObjects.GameObject[];
+function hash(x: number, y: number, salt: number): number {
+  let h = (x * 374761393 + y * 668265263 + salt * 1274126177) | 0;
+  h = (h ^ (h >> 13)) * 1103515245;
+  return Math.abs(h ^ (h >> 16));
 }
 
-const BUILDING_VISUALS: BuildingVisual[] = [
-  {
-    type: BuildingType.House,
-    draw: (scene, cx, cy) => {
-      const base = scene.add.rectangle(cx, cy + 4, 14, 10, 0x6b4a2a);
-      const roof = scene.add.triangle(cx, cy - 6, -9, 6, 0, -6, 9, 6, 0x8b3a1a);
-      const door = scene.add.rectangle(cx, cy + 6, 4, 5, 0x3a2a1a);
-      return [base, roof, door];
-    },
+// --- peintres de bâtiments ------------------------------------------------
+
+const BP = {
+  plaster: 0xf0e4cc,
+  plasterSh: 0xd6c6a4,
+  timber: 0x7a5230,
+  timberDk: 0x54381c,
+  thatch: 0xc8a862,
+  thatchDk: 0x9c7c40,
+  terra: 0xc06a48,
+  terraDk: 0x94452e,
+  slate: 0x6a5a50,
+  slateDk: 0x52443c,
+  stone: 0xc0b8a8,
+  stoneDk: 0x948c7c,
+  marble: 0xf0ead8,
+  marbleSh: 0xd0c6ae,
+  brass: 0xc9a84c,
+  brassDk: 0x8a6d3b,
+  window: 0xf2c46a,
+  fire: 0xe8863a,
+  fireCore: 0xf7b25a,
+  leaf: 0x5a7844,
+  leafDk: 0x3e5636,
+  canvasRed: 0xa84434,
+  ivory: 0xf0e8d8,
+  waterBlue: 0x3a6e88,
+  woodBrown: 0x8a6a42,
+};
+
+type Painter = (g: Phaser.GameObjects.Graphics, cx: number, cy: number) => void;
+
+function bx(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, c: number, a = 1): void {
+  g.fillStyle(c, a);
+  g.fillRect(x, y, w, h);
+}
+
+function gable(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  yBase: number,
+  w: number,
+  h: number,
+  light: number,
+  dark: number
+): void {
+  g.fillStyle(light, 1);
+  g.fillTriangle(cx - w / 2, yBase, cx, yBase - h, cx, yBase);
+  g.fillStyle(dark, 1);
+  g.fillTriangle(cx + w / 2, yBase, cx, yBase - h, cx, yBase);
+}
+
+function win(g: Phaser.GameObjects.Graphics, x: number, y: number, w = 3.2, h = 4): void {
+  bx(g, x, y, w, h, BP.timberDk);
+  bx(g, x + 0.5, y + 0.5, w - 1, h - 1, BP.window);
+}
+
+function smokePuff(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
+  g.fillStyle(0xb9bec7, 0.35);
+  g.fillCircle(x, y, 2.6);
+  g.fillStyle(0xcdd2da, 0.28);
+  g.fillCircle(x + 2, y - 3, 2);
+  g.fillStyle(0xdfe3ea, 0.22);
+  g.fillCircle(x + 4, y - 6, 1.5);
+}
+
+function pineTree(g: Phaser.GameObjects.Graphics, x: number, y: number, s: number, canopy: number): void {
+  g.fillStyle(BP.timberDk, 1);
+  g.fillRect(x - 0.8, y + 2 * s, 1.6, 3 * s);
+  g.fillStyle(canopy, 1);
+  g.fillTriangle(x - 3.4 * s, y + 2 * s, x + 3.4 * s, y + 2 * s, x, y - 4 * s);
+}
+
+const BUILDING_PAINTERS: Record<BuildingType, Painter> = {
+  [BuildingType.House]: (g, cx, cy) => {
+    bx(g, cx - 10, cy - 2, 20, 13, BP.plaster);
+    bx(g, cx - 10, cy - 2, 20, 2, BP.plasterSh);
+    gable(g, cx, cy - 2, 24, 10, BP.terra, BP.terraDk);
+    bx(g, cx - 3, cy + 4, 5, 7, BP.timberDk);
+    win(g, cx + 4, cy + 2);
+    g.lineStyle(1, BP.timber, 0.8);
+    g.lineBetween(cx - 10, cy + 2, cx + 10, cy + 2);
+    g.lineBetween(cx, cy - 12, cx, cy - 2);
   },
-  {
-    type: BuildingType.Farm,
-    draw: (scene, cx, cy) => {
-      const field1 = scene.add.rectangle(cx - 6, cy + 2, 8, 6, 0x5a8a2a);
-      const field2 = scene.add.rectangle(cx + 6, cy + 2, 8, 6, 0x4a7a1a);
-      const barn = scene.add.rectangle(cx, cy - 2, 10, 7, 0x8b5a2a);
-      const barnRoof = scene.add.triangle(cx, cy - 8, -6, 4, 0, -3, 6, 4, 0x6b3a1a);
-      return [field1, field2, barn, barnRoof];
-    },
+
+  [BuildingType.Farm]: (g, cx, cy) => {
+    g.lineStyle(2, 0x6a5a30, 0.85);
+    for (let r = 0; r < 3; r++) g.lineBetween(cx - 15, cy + 2 + r * 4.5, cx + 15, cy + r * 4.5);
+    bx(g, cx - 14, cy - 8, 16, 9, BP.woodBrown);
+    gable(g, cx - 6, cy - 8, 18, 7, BP.thatch, BP.thatchDk);
+    bx(g, cx - 8, cy - 5, 4, 6, BP.timberDk);
+    g.fillStyle(BP.window, 0.9);
+    g.fillCircle(cx - 1, cy - 4, 1.4);
   },
-  {
-    type: BuildingType.LumberMill,
-    draw: (scene, cx, cy) => {
-      const shed = scene.add.rectangle(cx, cy + 2, 12, 8, 0x5a3a1a);
-      const saw = scene.add.circle(cx + 4, cy - 2, 3, 0xaaaaaa);
-      const log1 = scene.add.rectangle(cx - 5, cy + 6, 6, 3, 0x4a2a0a);
-      const log2 = scene.add.rectangle(cx + 5, cy + 6, 6, 3, 0x3a2005);
-      return [shed, saw, log1, log2];
-    },
+
+  [BuildingType.Well]: (g, cx, cy) => {
+    g.fillStyle(BP.stoneDk, 1);
+    g.fillCircle(cx, cy + 4, 8);
+    g.fillStyle(BP.stone, 1);
+    g.fillCircle(cx, cy + 3, 7);
+    g.fillStyle(BP.waterBlue, 1);
+    g.fillCircle(cx, cy + 3, 4.4);
+    g.lineStyle(1.6, BP.timber, 1);
+    g.lineBetween(cx - 6, cy + 3, cx - 6, cy - 8);
+    g.lineBetween(cx + 6, cy + 3, cx + 6, cy - 8);
+    gable(g, cx, cy - 8, 17, 5, BP.thatch, BP.thatchDk);
+    g.fillStyle(BP.brass, 1);
+    g.fillCircle(cx, cy - 2, 1.6);
   },
-  {
-    type: BuildingType.Quarry,
-    draw: (scene, cx, cy) => {
-      const pit = scene.add.rectangle(cx, cy + 4, 14, 8, 0x6a6a6a);
-      const rock1 = scene.add.circle(cx - 3, cy, 4, 0x8a8a8a);
-      const rock2 = scene.add.circle(cx + 4, cy + 2, 3, 0x7a7a7a);
-      const cart = scene.add.rectangle(cx + 6, cy - 2, 5, 4, 0x5a3a1a);
-      return [pit, rock1, rock2, cart];
-    },
+
+  [BuildingType.LumberMill]: (g, cx, cy) => {
+    bx(g, cx - 13, cy - 4, 19, 12, BP.timber);
+    gable(g, cx - 3.5, cy - 4, 21, 8, BP.slate, BP.slateDk);
+    g.fillStyle(0xc9ced6, 1);
+    g.fillCircle(cx + 11, cy + 2, 5.4);
+    g.fillStyle(0x8a9099, 1);
+    g.fillCircle(cx + 11, cy + 2, 1.6);
+    g.fillStyle(BP.timberDk, 1);
+    g.fillRoundedRect(cx - 12, cy + 9, 11, 3.4, 1.6);
+    g.fillRoundedRect(cx - 10, cy + 5.6, 11, 3.4, 1.6);
   },
-  {
-    type: BuildingType.Sawmill,
-    draw: (scene, cx, cy) => {
-      const building = scene.add.rectangle(cx, cy + 2, 12, 8, 0x7a5a3a);
-      const roof = scene.add.triangle(cx, cy - 5, -7, 4, 0, -3, 7, 4, 0x5a3a1a);
-      const blade = scene.add.circle(cx + 5, cy, 3, 0xcccccc);
-      const planks = scene.add.rectangle(cx - 4, cy + 6, 8, 2, 0xb08040);
-      return [building, roof, blade, planks];
-    },
+
+  [BuildingType.Forester]: (g, cx, cy) => {
+    g.fillStyle(0x5d4a2e, 0.75);
+    g.fillEllipse(cx, cy + 6, 26, 7);
+    pineTree(g, cx - 8, cy - 1, 1.05, BP.leaf);
+    pineTree(g, cx + 1, cy + 1, 1.3, 0x5d9448);
+    pineTree(g, cx + 9, cy - 2, 0.85, BP.leafDk);
+    g.fillStyle(0xc9a84c, 0.95);
+    g.fillCircle(cx - 2, cy + 7, 1.5);
+    g.fillCircle(cx + 4, cy + 8, 1.5);
   },
-  {
-    type: BuildingType.Brickyard,
-    draw: (scene, cx, cy) => {
-      const kiln = scene.add.rectangle(cx, cy + 2, 12, 8, 0xaa5533);
-      const chimney = scene.add.rectangle(cx + 4, cy - 6, 3, 8, 0x884422);
-      const bricks = scene.add.rectangle(cx - 4, cy + 5, 6, 3, 0xcc6644);
-      return [kiln, chimney, bricks];
-    },
+
+  [BuildingType.HuntingCabin]: (g, cx, cy) => {
+    bx(g, cx - 10, cy - 3, 20, 12, BP.timberDk);
+    g.lineStyle(1, BP.timber, 0.9);
+    for (let r = 0; r < 4; r++) g.lineBetween(cx - 10, cy - 1 + r * 3, cx + 10, cy - 1 + r * 3);
+    gable(g, cx, cy - 3, 22, 7, BP.thatchDk, 0x7a5f2c);
+    bx(g, cx - 2, cy + 3, 4.4, 6, 0x2e1e10);
+    bx(g, cx + 12, cy - 6, 1.6, 12, BP.timber);
+    g.fillStyle(0xbfa075, 1);
+    g.fillRoundedRect(cx + 10, cy - 5, 6, 7, 2.4);
   },
-  {
-    type: BuildingType.Warehouse,
-    draw: (scene, cx, cy) => {
-      const main = scene.add.rectangle(cx, cy + 2, 14, 10, 0x555555);
-      const roof = scene.add.rectangle(cx, cy - 5, 16, 3, 0x444444);
-      const crate1 = scene.add.rectangle(cx - 3, cy + 4, 4, 4, 0x6a5a3a);
-      const crate2 = scene.add.rectangle(cx + 3, cy + 4, 4, 4, 0x5a4a2a);
-      return [main, roof, crate1, crate2];
-    },
+
+  [BuildingType.Quarry]: (g, cx, cy) => {
+    g.fillStyle(0x55555e, 1);
+    g.fillEllipse(cx, cy + 4, 30, 12);
+    g.fillStyle(0x767681, 1);
+    g.fillEllipse(cx, cy + 4, 22, 8);
+    bx(g, cx - 12, cy - 6, 6, 5, BP.stone);
+    bx(g, cx - 12, cy - 6, 6, 1.4, 0xc4c9d1);
+    bx(g, cx - 5, cy - 8, 6, 7, BP.stoneDk);
+    bx(g, cx - 5, cy - 8, 6, 1.4, 0x999fa8);
+    g.lineStyle(2, BP.timber, 1);
+    g.lineBetween(cx + 8, cy + 6, cx + 8, cy - 12);
+    g.lineBetween(cx + 8, cy - 12, cx + 15, cy - 7);
+    g.lineStyle(1, BP.ivory, 0.7);
+    g.lineBetween(cx + 15, cy - 7, cx + 15, cy - 3);
   },
-  {
-    type: BuildingType.Market,
-    draw: (scene, cx, cy) => {
-      const stall = scene.add.rectangle(cx, cy + 2, 14, 8, 0x8b6a3a);
-      const awning = scene.add.rectangle(cx, cy - 4, 16, 4, 0xcc3333);
-      const awning2 = scene.add.triangle(cx, cy - 8, -8, 3, 0, 0, 8, 3, 0xaa2222);
-      const goods = scene.add.circle(cx, cy + 2, 3, 0xc9a84c);
-      return [stall, awning, awning2, goods];
-    },
+
+  [BuildingType.Sawmill]: (g, cx, cy) => {
+    bx(g, cx - 15, cy - 3, 24, 12, BP.plaster);
+    g.lineStyle(1, BP.timber, 0.9);
+    g.strokeRect(cx - 15, cy - 3, 24, 12);
+    gable(g, cx - 3, cy - 3, 27, 9, BP.slate, BP.slateDk);
+    bx(g, cx - 11, cy + 2, 12, 2.2, 0xc09454);
+    bx(g, cx - 10, cy + 4.4, 12, 2.2, 0xa87c40);
+    g.fillStyle(0xc9ced6, 1);
+    g.fillCircle(cx + 13, cy + 1, 4.6);
+    g.lineStyle(1, 0x8a9099, 1);
+    g.strokeCircle(cx + 13, cy + 1, 2.4);
   },
-  {
-    type: BuildingType.TradingPost,
-    draw: (scene, cx, cy) => {
-      const base = scene.add.rectangle(cx, cy + 2, 12, 8, 0x3a5a8a);
-      const sign = scene.add.rectangle(cx, cy - 5, 10, 3, 0x3366aa);
-      const coin = scene.add.circle(cx, cy + 1, 3, 0xc9a84c);
-      return [base, sign, coin];
-    },
+
+  [BuildingType.Brickyard]: (g, cx, cy) => {
+    g.fillStyle(BP.terraDk, 1);
+    g.fillCircle(cx - 2, cy + 1, 10);
+    g.fillStyle(BP.terra, 1);
+    g.fillCircle(cx - 3.4, cy + 0.4, 9);
+    g.fillStyle(0x3a2018, 1);
+    g.fillTriangle(cx - 8, cy + 6, cx + 1, cy + 6, cx - 3.5, cy - 2);
+    g.fillStyle(BP.fire, 1);
+    g.fillTriangle(cx - 6.4, cy + 5, cx - 0.8, cy + 5, cx - 3.6, cy + 0.4);
+    bx(g, cx + 7, cy - 4, 8, 2.4, 0xc06a45);
+    bx(g, cx + 8, cy - 1.4, 8, 2.4, 0xa85838);
+    bx(g, cx + 7, cy + 1.2, 8, 2.4, 0xc06a45);
+    smokePuff(g, cx - 3, cy - 13);
   },
-  {
-    type: BuildingType.ResearchLab,
-    draw: (scene, cx, cy) => {
-      const lab = scene.add.rectangle(cx, cy + 2, 12, 8, 0x3a5a7a);
-      const roof = scene.add.rectangle(cx, cy - 5, 14, 3, 0x2a4a6a);
-      const flask = scene.add.circle(cx, cy, 3, 0x5588cc);
-      return [lab, roof, flask];
-    },
+
+  [BuildingType.Warehouse]: (g, cx, cy) => {
+    bx(g, cx - 14, cy - 4, 28, 13, BP.stoneDk);
+    bx(g, cx - 14, cy - 4, 28, 2.4, BP.stone);
+    gable(g, cx, cy - 4, 30, 6, BP.slate, BP.slateDk);
+    bx(g, cx - 5, cy + 1, 10, 8, BP.timberDk);
+    g.lineStyle(1, BP.timber, 1);
+    g.lineBetween(cx, cy + 1, cx, cy + 9);
+    bx(g, cx + 10, cy + 5, 5, 4, 0x8a6a3c);
+    bx(g, cx + 10, cy + 5, 5, 1.2, 0xa8854e);
   },
-  {
-    type: BuildingType.Garden,
-    draw: (scene, cx, cy) => {
-      const bed = scene.add.rectangle(cx, cy + 2, 12, 8, 0x3a8a3a);
-      const flower1 = scene.add.circle(cx - 3, cy, 2, 0xff6688);
-      const flower2 = scene.add.circle(cx + 3, cy - 1, 2, 0xffcc44);
-      const flower3 = scene.add.circle(cx, cy + 3, 2, 0xaa66ff);
-      return [bed, flower1, flower2, flower3];
-    },
+
+  [BuildingType.Market]: (g, cx, cy) => {
+    bx(g, cx - 13, cy - 1, 26, 9, BP.timber);
+    bx(g, cx - 13, cy - 1, 26, 2, 0x8a6538);
+    for (let i = 0; i < 6; i++) {
+      bx(g, cx - 14 + i * 4.7, cy - 8, 4.7, 4, i % 2 === 0 ? BP.canvasRed : BP.ivory);
+    }
+    bx(g, cx - 15, cy - 4.4, 30, 1.6, BP.timberDk);
+    g.fillStyle(BP.brass, 1);
+    g.fillCircle(cx - 5, cy + 3, 2);
+    g.fillCircle(cx - 1, cy + 4, 2);
+    g.fillStyle(0xd8b25a, 1);
+    g.fillCircle(cx + 6, cy + 3.4, 2.4);
   },
-  {
-    type: BuildingType.Inn,
-    draw: (scene, cx, cy) => {
-      const base = scene.add.rectangle(cx, cy + 2, 14, 8, 0x6a4a2a);
-      const roof = scene.add.triangle(cx, cy - 5, -8, 4, 0, -4, 8, 4, 0x5a3a1a);
-      const sign = scene.add.rectangle(cx + 6, cy - 2, 4, 3, 0xc9a84c);
-      return [base, roof, sign];
-    },
+
+  [BuildingType.TradingPost]: (g, cx, cy) => {
+    bx(g, cx - 11, cy - 3, 22, 12, BP.plaster);
+    bx(g, cx - 11, cy - 3, 22, 2, BP.plasterSh);
+    gable(g, cx, cy - 3, 24, 8, 0x4a6a8a, 0x39536e);
+    bx(g, cx - 3, cy + 3, 6, 6, BP.timberDk);
+    g.lineStyle(1.4, BP.timber, 1);
+    g.lineBetween(cx + 11, cy - 3, cx + 11, cy - 13);
+    g.fillStyle(BP.brass, 1);
+    g.fillCircle(cx + 11, cy - 11, 3);
+    g.lineStyle(1, BP.brassDk, 1);
+    g.strokeCircle(cx + 11, cy - 11, 3);
   },
-  {
-    type: BuildingType.Academy,
-    draw: (scene, cx, cy) => {
-      const base = scene.add.rectangle(cx, cy + 2, 14, 10, 0x3a4a7a);
-      const columns = scene.add.rectangle(cx, cy - 2, 12, 2, 0xccccdd);
-      const roof = scene.add.triangle(cx, cy - 7, -8, 4, 0, -3, 8, 4, 0x2a3a6a);
-      return [base, columns, roof];
-    },
+
+  [BuildingType.Tannery]: (g, cx, cy) => {
+    bx(g, cx - 12, cy - 2, 17, 10, BP.timber);
+    gable(g, cx - 3.5, cy - 2, 19, 6, BP.thatchDk, 0x7a5f2c);
+    g.fillStyle(0x6f471f, 1);
+    g.fillCircle(cx + 9, cy + 5, 4.6);
+    g.fillStyle(0x8a5a2e, 1);
+    g.fillCircle(cx + 9, cy + 4.4, 3.6);
+    g.lineStyle(1.4, BP.timber, 1);
+    g.lineBetween(cx - 14, cy - 8, cx - 14, cy + 6);
+    g.lineBetween(cx - 4, cy - 8, cx - 4, cy + 6);
+    g.lineBetween(cx - 14, cy - 7, cx - 4, cy - 7);
+    g.fillStyle(0xbfa075, 1);
+    g.fillRoundedRect(cx - 12, cy - 6, 7, 9, 3);
   },
-  {
-    type: BuildingType.Wall,
-    draw: (scene, cx, cy) => {
-      const wall = scene.add.rectangle(cx, cy + 2, 14, 10, 0x777777);
-      const merlon1 = scene.add.rectangle(cx - 4, cy - 4, 3, 4, 0x888888);
-      const merlon2 = scene.add.rectangle(cx + 4, cy - 4, 3, 4, 0x888888);
-      return [wall, merlon1, merlon2];
-    },
+
+  [BuildingType.ResearchLab]: (g, cx, cy) => {
+    bx(g, cx - 10, cy - 2, 20, 11, BP.marble);
+    bx(g, cx - 10, cy - 2, 20, 1.8, BP.marbleSh);
+    g.fillStyle(0x506aa8, 1);
+    g.fillCircle(cx, cy - 2, 7.4);
+    g.fillStyle(0x5d84b8, 1);
+    g.fillCircle(cx - 1.6, cy - 3, 6.4);
+    g.fillStyle(BP.marble, 1);
+    g.fillRect(cx - 8, cy + 1, 2, 7);
+    g.fillRect(cx + 6, cy + 1, 2, 7);
+    g.lineStyle(1.2, 0x8ab5d8, 1);
+    g.lineBetween(cx + 8, cy - 12, cx + 11, cy - 15);
+    g.fillStyle(0x8ab5d8, 1);
+    g.fillCircle(cx + 11.6, cy - 15.6, 1.4);
   },
-  {
-    type: BuildingType.Tannery,
-    draw: (scene, cx, cy) => {
-      const base = scene.add.rectangle(cx, cy + 2, 12, 8, 0x7a5a2a);
-      const vat = scene.add.circle(cx, cy + 1, 4, 0x8b6914);
-      const hide = scene.add.rectangle(cx - 4, cy + 4, 5, 3, 0xb08040);
-      return [base, vat, hide];
-    },
+
+  [BuildingType.Garden]: (g, cx, cy) => {
+    g.fillStyle(BP.leafDk, 1);
+    g.fillEllipse(cx, cy + 3, 30, 15);
+    g.fillStyle(0x5c9a52, 1);
+    g.fillEllipse(cx, cy + 2.4, 26, 12);
+    g.lineStyle(1.4, 0x8fbf84, 0.9);
+    g.arc(cx, cy + 2.4, 10, Phaser.Math.DegToRad(200), Phaser.Math.DegToRad(340));
+    const flowers = [0xdd8899, 0xe8d070, 0xaa66ff, 0xe8788a, 0xf0e8d8];
+    flowers.forEach((fc, i) => {
+      const a = (i / flowers.length) * Math.PI * 2;
+      g.fillStyle(fc, 1);
+      g.fillCircle(cx + Math.cos(a) * 7, cy + 2.4 + Math.sin(a) * 4, 1.7);
+    });
   },
-  {
-    type: BuildingType.Forge,
-    draw: (scene, cx, cy) => {
-      const base = scene.add.rectangle(cx, cy + 2, 12, 8, 0x555555);
-      const anvil = scene.add.rectangle(cx - 2, cy + 1, 5, 4, 0x666666);
-      const fire = scene.add.circle(cx + 4, cy, 3, 0xff6622);
-      return [base, anvil, fire];
-    },
+
+  [BuildingType.Inn]: (g, cx, cy) => {
+    bx(g, cx - 11, cy - 6, 22, 16, BP.plaster);
+    g.lineStyle(1, BP.timber, 0.9);
+    g.strokeRect(cx - 11, cy - 6, 22, 16);
+    g.lineBetween(cx - 11, cy, cx + 11, cy);
+    gable(g, cx, cy - 6, 26, 8, BP.terra, BP.terraDk);
+    win(g, cx - 6, cy - 4, 3, 3.4);
+    win(g, cx + 3, cy - 4, 3, 3.4);
+    bx(g, cx - 3, cy + 3, 5.4, 7, BP.timberDk);
+    g.lineStyle(1.4, BP.timber, 1);
+    g.lineBetween(cx + 13, cy - 6, cx + 13, cy - 15);
+    g.fillStyle(BP.brass, 1);
+    g.fillRoundedRect(cx + 10.6, cy - 14, 4.8, 4, 1);
   },
-  {
-    type: BuildingType.Tavern,
-    draw: (scene, cx, cy) => {
-      const base = scene.add.rectangle(cx, cy + 2, 14, 8, 0x7a5a2a);
-      const roof = scene.add.triangle(cx, cy - 5, -8, 4, 0, -4, 8, 4, 0x6a4a1a);
-      const mug = scene.add.rectangle(cx + 5, cy, 3, 4, 0xddcc88);
-      return [base, roof, mug];
-    },
+
+  [BuildingType.Academy]: (g, cx, cy) => {
+    bx(g, cx - 14, cy - 3, 28, 12, BP.marble);
+    gable(g, cx, cy - 3, 30, 9, 0xe8dfcc, BP.marbleSh);
+    g.fillStyle(0x8a6d3b, 1);
+    g.fillCircle(cx, cy - 8.6, 1.8);
+    for (const dx of [-9, -3, 3, 9]) {
+      bx(g, cx + dx - 1.4, cy - 1, 2.8, 8, BP.ivory);
+      bx(g, cx + dx - 1.4, cy - 1, 2.8, 1.4, 0xd8cfbc);
+    }
+    bx(g, cx - 16, cy + 9, 32, 2, 0xcfc6b2);
+    bx(g, cx - 14, cy + 7, 28, 2, 0xded5c2);
   },
-  {
-    type: BuildingType.Tower,
-    draw: (scene, cx, cy) => {
-      const base = scene.add.rectangle(cx, cy + 3, 10, 12, 0x666688);
-      const top = scene.add.rectangle(cx, cy - 5, 12, 4, 0x777799);
-      const flag = scene.add.triangle(cx + 4, cy - 8, 0, 0, 6, 2, 0, 4, 0xcc3333);
-      return [base, top, flag];
-    },
+
+  [BuildingType.Wall]: (g, cx, cy) => {
+    bx(g, cx - 16, cy - 3, 32, 13, BP.stoneDk);
+    bx(g, cx - 16, cy - 3, 32, 2.6, BP.stone);
+    for (const mx of [-13, -6.5, 0, 6.5, 13]) {
+      bx(g, cx + mx - 2.4, cy - 8, 4.8, 5, BP.stoneDk);
+      bx(g, cx + mx - 2.4, cy - 8, 4.8, 1.6, BP.stone);
+    }
+    g.lineStyle(1, 0x60656d, 0.8);
+    g.lineBetween(cx - 16, cy + 2, cx + 16, cy + 2);
+    g.lineBetween(cx - 8, cy - 1, cx - 8, cy + 10);
+    g.lineBetween(cx + 7, cy + 1, cx + 7, cy + 10);
   },
-  {
-    type: BuildingType.Chapel,
-    draw: (scene, cx, cy) => {
-      const base = scene.add.rectangle(cx, cy + 2, 12, 10, 0xccbbaa);
-      const steeple = scene.add.triangle(cx, cy - 8, -4, 6, 0, -4, 4, 6, 0xbbaa99);
-      const cross = scene.add.rectangle(cx, cy - 10, 1, 4, 0xddddcc);
-      const crossBar = scene.add.rectangle(cx, cy - 9, 3, 1, 0xddddcc);
-      return [base, steeple, cross, crossBar];
-    },
+
+  [BuildingType.Tower]: (g, cx, cy) => {
+    bx(g, cx - 6, cy - 16, 12, 26, 0x8b93a8);
+    bx(g, cx + 1, cy - 16, 5, 26, 0x6e7888);
+    for (const mx of [-6, -1.4, 3.2]) {
+      bx(g, cx + mx, cy - 20, 3.6, 4, 0x8b93a8);
+    }
+    bx(g, cx - 7, cy - 16, 14, 2, 0x9aa2b5);
+    bx(g, cx - 1, cy - 9, 2.4, 5, 0x3a4048);
+    g.lineStyle(1.4, BP.timberDk, 1);
+    g.lineBetween(cx + 6, cy - 20, cx + 6, cy - 27);
+    g.fillStyle(BP.canvasRed, 1);
+    g.fillTriangle(cx + 6, cy - 27, cx + 6, cy - 23, cx + 13, cy - 25);
   },
-  {
-    type: BuildingType.Well,
-    draw: (scene, cx, cy) => {
-      const base = scene.add.circle(cx, cy + 2, 6, 0x5a5a5a);
-      const water = scene.add.circle(cx, cy + 2, 4, 0x4488cc);
-      const roof = scene.add.rectangle(cx, cy - 5, 8, 3, 0x6a4a2a);
-      return [base, water, roof];
-    },
+
+  [BuildingType.Forge]: (g, cx, cy) => {
+    bx(g, cx - 12, cy - 3, 20, 12, BP.stoneDk);
+    bx(g, cx - 12, cy - 3, 20, 2.2, BP.stone);
+    gable(g, cx - 2, cy - 3, 22, 7, BP.slate, BP.slateDk);
+    bx(g, cx + 5, cy - 14, 5, 11, 0x707682);
+    smokePuff(g, cx + 7.5, cy - 17);
+    g.fillStyle(0x3a3f48, 1);
+    g.fillRect(cx - 9, cy + 3, 7, 3);
+    g.fillRect(cx - 4, cy + 1.6, 2.6, 5.4);
+    g.fillStyle(BP.fire, 0.9);
+    g.fillCircle(cx + 2, cy + 6, 3.4);
+    g.fillStyle(BP.fireCore, 1);
+    g.fillCircle(cx + 2, cy + 6, 1.8);
   },
-];
+
+  [BuildingType.Tavern]: (g, cx, cy) => {
+    bx(g, cx - 13, cy - 5, 26, 15, BP.timber);
+    bx(g, cx - 13, cy - 5, 26, 2.4, 0x8a6538);
+    gable(g, cx, cy - 5, 29, 8, BP.thatch, BP.thatchDk);
+    win(g, cx - 8, cy - 1, 3.4, 4);
+    win(g, cx + 4, cy - 1, 3.4, 4);
+    bx(g, cx - 3, cy + 3, 6, 7, 0x2e1e10);
+    for (let i = 0; i < 4; i++) {
+      bx(g, cx - 13 + i * 7, cy - 8.4, 7, 3.4, i % 2 === 0 ? BP.canvasRed : BP.ivory);
+    }
+    smokePuff(g, cx + 9, cy - 16);
+  },
+
+  [BuildingType.Chapel]: (g, cx, cy) => {
+    bx(g, cx - 8, cy - 8, 16, 18, BP.marble);
+    bx(g, cx - 8, cy - 8, 16, 2, 0xece3d0);
+    g.fillStyle(BP.slateDk, 1);
+    g.fillTriangle(cx - 10, cy - 8, cx + 10, cy - 8, cx, cy - 24);
+    g.lineStyle(1, 0x333a44, 0.8);
+    g.lineBetween(cx, cy - 24, cx - 10, cy - 8);
+    g.lineStyle(2, BP.brass, 1);
+    g.lineBetween(cx, cy - 24, cx, cy - 29);
+    g.lineBetween(cx - 2.4, cy - 27, cx + 2.4, cy - 27);
+    g.fillStyle(BP.window, 1);
+    g.fillCircle(cx, cy - 2, 2.6);
+    bx(g, cx - 1.4, cy + 4, 2.8, 6, 0x8a7d60);
+  },
+};
+
+const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
+  [BuildingType.House]: 0xb5563a,
+  [BuildingType.Farm]: 0x7a8a40,
+  [BuildingType.Well]: 0x5a9ac8,
+  [BuildingType.LumberMill]: 0x6f4a2a,
+  [BuildingType.Forester]: 0x3d7a35,
+  [BuildingType.HuntingCabin]: 0x5a7a3a,
+  [BuildingType.Quarry]: 0x8a8f99,
+  [BuildingType.Sawmill]: 0x9a6b3a,
+  [BuildingType.Brickyard]: 0xaa5533,
+  [BuildingType.Warehouse]: 0x5a6068,
+  [BuildingType.Market]: 0xc9a84c,
+  [BuildingType.TradingPost]: 0x4a6a8a,
+  [BuildingType.Tannery]: 0xa06a35,
+  [BuildingType.ResearchLab]: 0x5d84b8,
+  [BuildingType.Garden]: 0x5c9a52,
+  [BuildingType.Inn]: 0x8b5a2a,
+  [BuildingType.Academy]: 0x506aa8,
+  [BuildingType.Wall]: 0x9aa0aa,
+  [BuildingType.Tower]: 0x6e7888,
+  [BuildingType.Forge]: 0x55606e,
+  [BuildingType.Tavern]: 0xb0713e,
+  [BuildingType.Chapel]: 0xd8cdb8,
+};
 
 export class TileMap {
   scene: Phaser.Scene;
   container: Phaser.GameObjects.Container;
-  tiles: Phaser.GameObjects.Rectangle[][] = [];
-  buildingGfx: Phaser.GameObjects.Container[] = [];
-  hoverHighlight: Phaser.GameObjects.Rectangle;
-  shadowLayer: Phaser.GameObjects.Graphics;
-  decoLayer: Phaser.GameObjects.Graphics;
+  private terrainGfx: Phaser.GameObjects.Graphics;
+  private detailGfx: Phaser.GameObjects.Graphics;
+  private buildingGfx: Phaser.GameObjects.Graphics;
+  private overlayGfx: Phaser.GameObjects.Graphics;
   currentSeason: Season = Season.Spring;
-  minimapContainer: Phaser.GameObjects.Container;
-  minimapPixels: Phaser.GameObjects.Rectangle[][] = [];
-  minimapCam: Phaser.GameObjects.Graphics;
+
+  minimapContainer!: Phaser.GameObjects.Container;
+  private minimapPixels: Phaser.GameObjects.Rectangle[][] = [];
+  private minimapCam!: Phaser.GameObjects.Graphics;
+  private readonly MM_SCALE = 6;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
     this.container = scene.add.container(0, 0);
 
-    const mapW = GRID_COLS * TILE_SIZE;
-    const mapH = GRID_ROWS * TILE_SIZE;
+    this.shadowPlate();
 
-    const dropShadow = scene.add.rectangle(mapW / 2 + 7, mapH / 2 + 9, mapW + 8, mapH + 8, 0x000000, 0.4);
-    this.container.add(dropShadow);
+    this.terrainGfx = scene.add.graphics();
+    this.detailGfx = scene.add.graphics();
+    this.buildingGfx = scene.add.graphics();
+    this.overlayGfx = scene.add.graphics();
+    this.container.add([this.terrainGfx, this.detailGfx, this.buildingGfx, this.overlayGfx]);
+  }
 
-    const frame = scene.add.rectangle(mapW / 2, mapH / 2, mapW + 6, mapH + 6);
-    frame.setStrokeStyle(1, 0xc9a84c, 0.18);
-    this.container.add(frame);
+  private shadowPlate(): void {
+    const g = this.scene.add.graphics();
+    g.fillStyle(0x000000, 0.36);
+    g.fillRoundedRect(12, 16, MAP_W + 2, MAP_H + 4, 26);
+    g.fillStyle(C.panel, 1);
+    g.fillRoundedRect(0, 0, MAP_W + 4, MAP_H + 6, 22);
+    g.lineStyle(1, 0xc9a84c, 0.28);
+    g.strokeRoundedRect(3, 3, MAP_W - 2, MAP_H, 20);
+    g.lineStyle(1, 0xc9a84c, 0.12);
+    g.strokeRoundedRect(7, 7, MAP_W - 10, MAP_H - 8, 16);
+    this.container.add(g);
+  }
 
-    this.shadowLayer = scene.add.graphics();
-    this.container.add(this.shadowLayer);
+  ensureMinimap(ui: Phaser.Scene): void {
+    if (this.minimapBuilt) return;
+    this.minimapBuilt = true;
+    this.ui = ui;
+    this.lastTerrainSig = "";
+    this.lastBuildingSig = "";
 
-    for (let y = 0; y < GRID_ROWS; y++) {
-      this.tiles[y] = [];
-      for (let x = 0; x < GRID_COLS; x++) {
-        const rect = scene.add.rectangle(
-          x * TILE_SIZE + TILE_SIZE / 2,
-          y * TILE_SIZE + TILE_SIZE / 2,
-          TILE_SIZE - 1,
-          TILE_SIZE - 1,
-          0x3d6b35
-        );
-        rect.setStrokeStyle(1, 0x000000, 0.08);
-        this.tiles[y][x] = rect;
-        this.container.add(rect);
-      }
-    }
+    const w = GRID_COLS * this.MM_SCALE;
+    const h = GRID_ROWS * this.MM_SCALE;
+    this.mmW = w;
+    this.mmH = h;
 
-    this.decoLayer = scene.add.graphics();
-    this.container.add(this.decoLayer);
+    this.minimapContainer = ui.add.container(Viewport.w - w - 16, Viewport.h - 76 - 12 - h);
 
-    this.hoverHighlight = scene.add.rectangle(0, 0, TILE_SIZE, TILE_SIZE);
-    this.hoverHighlight.setStrokeStyle(2, 0xffffff);
-    this.hoverHighlight.setFillStyle(0xffffff, 0.15);
-    this.hoverHighlight.setVisible(false);
-    this.container.add(this.hoverHighlight);
-
-    this.minimapContainer = scene.add.container(1280 - GRID_COLS * 4 - 12, 652 - GRID_ROWS * 4 - 8);
-    const mmBg = scene.add.rectangle(GRID_COLS * 2, GRID_ROWS * 2, GRID_COLS * 4 + 4, GRID_ROWS * 4 + 4, 0x0f0f1e, 0.85);
-    mmBg.setStrokeStyle(1, 0xc9a84c, 0.4);
-    this.minimapContainer.add(mmBg);
+    const frame = ui.add.graphics();
+    frame.fillStyle(C.panel, 0.94);
+    frame.fillRoundedRect(-4, -4, w + 8, h + 8, 8);
+    frame.lineStyle(1, 0xc9a84c, 0.5);
+    frame.strokeRoundedRect(-3.5, -3.5, w + 7, h + 7, 8);
+    this.minimapContainer.add(frame);
 
     for (let y = 0; y < GRID_ROWS; y++) {
       this.minimapPixels[y] = [];
       for (let x = 0; x < GRID_COLS; x++) {
-        const px = scene.add.rectangle(x * 4 + 2, y * 4 + 2, 4, 4, 0x3d6b35);
+        const px = ui.add.rectangle(
+          x * this.MM_SCALE + this.MM_SCALE / 2,
+          y * this.MM_SCALE + this.MM_SCALE / 2,
+          this.MM_SCALE,
+          this.MM_SCALE,
+          0x3d6b35
+        );
         this.minimapPixels[y][x] = px;
         this.minimapContainer.add(px);
       }
     }
 
-    this.minimapCam = scene.add.graphics();
+    this.minimapCam = ui.add.graphics();
     this.minimapContainer.add(this.minimapCam);
-
     this.minimapContainer.setDepth(90);
+
+    const hit = ui.add.rectangle(w / 2, h / 2, w + 8, h + 8, 0xffffff, 0.001);
+    hit.setInteractive({ useHandCursor: true });
+    hit.on("pointerdown", (_p: Phaser.Input.Pointer, lx: number, ly: number) => {
+      this.mmDragging = true;
+      this.centerCameraOnMinimap(lx, ly);
+    });
+    hit.on("pointermove", (_p: Phaser.Input.Pointer, lx: number, ly: number) => {
+      if (this.mmDragging) this.centerCameraOnMinimap(lx, ly);
+    });
+    ui.input.on("pointerup", () => {
+      this.mmDragging = false;
+    });
+    this.minimapContainer.add(hit);
+
+    ui.game.events.on(
+      "renderscale",
+      () => {
+        if (this.minimapContainer) {
+          this.minimapContainer.setPosition(Viewport.w - this.mmW - 16, Viewport.h - 76 - 12 - this.mmH);
+        }
+      },
+      this
+    );
   }
 
+  private mmW = 0;
+  private mmH = 0;
+
+  private mmDragging = false;
+  private minimapBuilt = false;
+  private ui?: Phaser.Scene;
+  private lastTerrainSig = "";
+  private lastBuildingSig = "";
+
+  private centerCameraOnMinimap(lx: number, ly: number): void {
+    const cam = this.scene.cameras.main;
+    const wx = Phaser.Math.Clamp(((lx + this.mmW / 2) / this.mmW) * MAP_W, 0, MAP_W);
+    const wy = Phaser.Math.Clamp(((ly + this.mmH / 2) / this.mmH) * MAP_H, 0, MAP_H);
+    cam.scrollX = wx - cam.width / 2;
+    cam.scrollY = wy - cam.height / 2;
+  }
+
+  private cornersAt(cx: number, cy: number): Corner[] {
+    const flat = hexCorners(cx, cy);
+    const pts: Corner[] = [];
+    for (let i = 0; i < flat.length; i += 2) pts.push({ x: flat[i], y: flat[i + 1] });
+    return pts;
+  }
+
+  private paintHex(g: Phaser.GameObjects.Graphics, cx: number, cy: number, color: number): void {
+    const pts = this.cornersAt(cx, cy);
+    g.fillStyle(color, 1);
+    g.fillPoints(pts as unknown as Phaser.Geom.Point[], true);
+
+    g.lineStyle(1, 0xffffff, 0.045);
+    for (const idx of [4, 5]) {
+      const a = pts[idx];
+      const b = pts[(idx + 1) % 6];
+      g.lineBetween(a.x, a.y, b.x, b.y);
+    }
+    g.lineStyle(1, 0x000000, 0.09);
+    for (const idx of [1, 2]) {
+      const a = pts[idx];
+      const b = pts[(idx + 1) % 6];
+      g.lineBetween(a.x, a.y, b.x, b.y);
+    }
+
+    g.lineStyle(1, 0x000000, 0.11);
+    const closed = [...pts, pts[0]];
+    for (let i = 0; i < 6; i++) {
+      g.lineBetween(closed[i].x, closed[i].y, closed[i + 1].x, closed[i + 1].y);
+    }
+  }
+
+  private paintCoast(g: Phaser.GameObjects.Graphics, state: GameState, col: number, row: number): void {
+    const dirs = hexNeighbors(col, row);
+    const cx = hexCenter(col, row).x;
+    const cy = hexCenter(col, row).y;
+    const pts = this.cornersAt(cx, cy);
+    g.lineStyle(2, 0xbfe0e4, 0.5);
+    dirs.forEach((n, i) => {
+      if (!this.isLand(state, n.col, n.row)) return;
+      const [ia, ib] = DIR_EDGES[i];
+      const a = pts[ia];
+      const b = pts[ib];
+      g.lineBetween(a.x * 0.86 + cx * 0.14, a.y * 0.86 + cy * 0.14, b.x * 0.86 + cx * 0.14, b.y * 0.86 + cy * 0.14);
+    });
+  }
+
+  private isLand(state: GameState, col: number, row: number): boolean {
+    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return false;
+    return state.tiles[row][col].type !== TileType.Water;
+  }
+
+  // --- décorations -------------------------------------------------------
+
   private drawDecorations(state: GameState): void {
-    const g = this.decoLayer;
+    const g = this.detailGfx;
     g.clear();
+    const season = state.season;
 
     for (let y = 0; y < GRID_ROWS; y++) {
       for (let x = 0; x < GRID_COLS; x++) {
         const tile = state.tiles[y][x];
         if (tile.buildingId !== null) continue;
-
-        const px = x * TILE_SIZE + TILE_SIZE / 2;
-        const py = y * TILE_SIZE + TILE_SIZE / 2;
-        const hash = Math.abs((x * 73856093) ^ (y * 19349663));
+        const { x: px, y: py } = hexCenter(x, y);
+        const h = hash(x, y, 7);
 
         switch (tile.type) {
-          case TileType.Forest: {
-            const count = 2 + (hash % 2);
-            const canopy = TREE_COLORS[state.season];
-            const canopyLight = Phaser.Display.Color.IntegerToColor(canopy).brighten(30).color;
-            for (let i = 0; i < count; i++) {
-              const tx = px - 8 + ((hash >> (i * 3)) % 17);
-              const ty = py - 4 + ((hash >> (i * 5 + 2)) % 13);
-              g.fillStyle(0x5a3a20, 1);
-              g.fillRect(tx - 1, ty + 1, 2, 4);
-              g.fillStyle(canopy, 1);
-              g.fillTriangle(tx - 5, ty + 2, tx + 5, ty + 2, tx, ty - 6);
-              g.fillStyle(canopyLight, 0.9);
-              g.fillTriangle(tx - 3, ty - 2, tx + 3, ty - 2, tx, ty - 8);
-            }
+          case TileType.Forest:
+            this.paintForest(g, px, py, x, y, season, h);
             break;
-          }
-          case TileType.Mountain: {
-            g.fillStyle(0x7e7e88, 1);
-            g.fillTriangle(px - 14, py + 11, px + 14, py + 11, px, py - 13);
-            g.fillStyle(0x94949e, 1);
-            g.fillTriangle(px - 14, py + 11, px, py + 11, px, py - 13);
-            g.fillStyle(0xe8ecf2, 1);
-            g.fillTriangle(px, py - 13, px - 5, py - 4, px + 5, py - 4);
+          case TileType.Mountain:
+            this.paintMountain(g, px, py, season, h);
             break;
-          }
-          case TileType.Water: {
-            g.fillStyle(0xaad4ee, 0.28);
-            g.fillEllipse(px - 5 + (hash % 3), py - 5, 10, 2);
-            g.fillEllipse(px + 6 - (hash % 4), py + 3, 9, 2);
-            g.fillEllipse(px - 2 + (hash % 2), py + 9, 8, 2);
+          case TileType.Water:
+            this.paintWater(g, px, py, h);
             break;
-          }
-          case TileType.Farmable: {
-            g.fillStyle(state.season === Season.Autumn ? 0x8a6a28 : 0x3f6b28, 0.85);
-            for (let r = 0; r < 3; r++) {
-              g.fillRect(px - 11, py - 8 + r * 7, 22, 2);
-            }
+          case TileType.Farmable:
+            this.paintFarmable(g, px, py, season, h);
             break;
-          }
-          case TileType.Grass: {
-            if (state.season === Season.Winter && hash % 7 === 0) {
-              g.fillStyle(0xf0f4f8, 0.55);
-              g.fillEllipse(px - 6 + (hash % 10), py - 4 + (hash % 8), 8, 3);
-            } else if (hash % 9 === 0) {
-              const fx = px - 8 + (hash % 16);
-              const fy = py - 8 + ((hash >> 4) % 16);
-              g.fillStyle(hash % 18 === 0 ? 0xe8d070 : 0xdd8899, 0.9);
-              g.fillCircle(fx, fy, 1.5);
-            }
+          case TileType.Grass:
+            this.paintGrassDetails(g, px, py, season, h);
             break;
-          }
         }
       }
     }
   }
 
-  sync(state: GameState): void {
-    if (state.season !== this.currentSeason) {
-      this.currentSeason = state.season;
-    }
-    for (let y = 0; y < GRID_ROWS; y++) {
-      for (let x = 0; x < GRID_COLS; x++) {
-        const tile = state.tiles[y][x];
-        const rect = this.tiles[y][x];
+  private paintForest(g: Phaser.GameObjects.Graphics, px: number, py: number, x: number, y: number, season: Season, h: number): void {
+    const canopy = TREE_CANOPY[season];
+    const count = 4 + (h % 3);
 
-        if (tile.buildingId !== null) {
-          const building = state.buildings.find((b) => b.id === tile.buildingId);
-          if (building) {
-            rect.setFillStyle(BUILDINGS[building.type].color);
-          } else {
-            rect.setFillStyle(tileColor(tile.type, x, y, state.season));
-          }
-        } else {
-          rect.setFillStyle(tileColor(tile.type, x, y, state.season));
+    for (let i = 0; i < count; i++) {
+      const tx = px - 14 + ((h >> (i * 3)) % 29);
+      const ty = py + 6 - ((h >> (i * 5 + 2)) % 21);
+      const scale = 0.85 + ((h >> (i + 9)) % 30) / 100;
+      const isCypress = (h >> (i * 2 + 4)) % 5 < 3;
+
+      g.fillStyle(0x000000, 0.14);
+      g.fillEllipse(tx, ty + 3, 10 * scale, 3);
+
+      if (isCypress) {
+        const dark = season === Season.Winter ? 0x3a4a3a : CYPRESS_DK;
+        const mid = season === Season.Winter ? 0x4a5c48 : CYPRESS;
+        g.fillStyle(0x4c3a20, 1);
+        g.fillRect(tx - 1, ty + 1, 2, 4 * scale);
+        g.fillStyle(dark, 1);
+        g.fillTriangle(tx - 4.2 * scale, ty + 2, tx + 4.2 * scale, ty + 2, tx, ty - 16 * scale);
+        g.fillStyle(mid, 1);
+        g.fillTriangle(tx - 2.6 * scale, ty, tx + 1.4 * scale, ty, tx - 0.6, ty - 16 * scale);
+        if (season === Season.Winter) {
+          g.fillStyle(0xe8eef2, 0.75);
+          g.fillTriangle(tx - 1.6 * scale, ty - 12 * scale, tx + 1.6 * scale, ty - 12 * scale, tx, ty - 16 * scale);
+        }
+      } else {
+        const trunkH = 8 * scale;
+        g.fillStyle(0x6a5232, 1);
+        g.fillRect(tx - 1.1, ty + 2 - 1, 2.2, trunkH);
+        const crownY = ty + 2 - trunkH;
+        const autumn = season === Season.Autumn;
+        const crown = autumn ? 0x9a7c40 : canopy;
+        g.fillStyle(autumn ? 0x7a6030 : 0x3e5636, 1);
+        g.fillEllipse(tx, crownY + 2, 15 * scale, 6 * scale);
+        g.fillStyle(crown, 1);
+        g.fillEllipse(tx, crownY, 16 * scale, 7 * scale);
+        g.fillStyle(autumn ? 0xb89450 : 0x6c8452, 0.85);
+        g.fillEllipse(tx - 3 * scale, crownY - 2 * scale, 9 * scale, 4 * scale);
+        if (season === Season.Winter) {
+          g.fillStyle(0xe8eef2, 0.7);
+          g.fillEllipse(tx, crownY - 2.4 * scale, 13 * scale, 3.4 * scale);
         }
       }
     }
+  }
 
-    for (const gfx of this.buildingGfx) {
-      gfx.destroy();
+  private paintMountain(g: Phaser.GameObjects.Graphics, px: number, py: number, season: Season, h: number): void {
+    g.fillStyle(0x000000, 0.14);
+    g.fillEllipse(px, py + 11, 30, 7);
+
+    g.fillStyle(0x635c50, 1);
+    g.fillTriangle(px - 16, py + 11, px + 14, py + 11, px + 3, py - 13);
+    g.fillStyle(0x857c6d, 1);
+    g.fillTriangle(px - 16, py + 11, px + 1, py + 11, px + 3, py - 13);
+    g.fillStyle(0xa3988a, 0.95);
+    g.fillTriangle(px - 16, py + 11, px - 5, py + 11, px + 1.4, py - 5);
+    g.lineStyle(1, 0x4e483e, 0.5);
+    g.lineBetween(px + 3, py - 13, px + 1, py + 11);
+
+    if (h % 3 === 0) {
+      g.fillStyle(0x6b6355, 1);
+      g.fillTriangle(px + 6, py + 11, px + 17, py + 11, px + 12, py + 2);
+      g.fillStyle(0x877e6f, 0.9);
+      g.fillTriangle(px + 12, py + 2, px + 9.6, py + 6, px + 14.4, py + 6);
     }
-    this.buildingGfx = [];
 
-    this.drawDecorations(state);
+    if (season === Season.Winter) {
+      g.fillStyle(0xeef2f4, 0.92);
+      g.fillTriangle(px + 3, py - 13, px - 2.4, py - 6, px + 8, py - 6);
+      g.fillStyle(0xdde4ea, 0.55);
+      g.fillEllipse(px - 8, py + 8, 10, 3);
+      g.fillEllipse(px + 10, py + 9, 9, 3);
+    }
+  }
 
-    this.shadowLayer.clear();
+  private paintWater(g: Phaser.GameObjects.Graphics, px: number, py: number, h: number): void {
+    g.fillStyle(0x1c3a4c, 0.22);
+    g.fillEllipse(px, py + 2, 30, 22);
+
+    g.lineStyle(1.4, 0x9ec8dc, 0.3);
+    const waves: [number, number, number][] = [
+      [-8, -5, 8],
+      [6, 4, 7],
+      [-3, 10, 6],
+    ];
+    waves.forEach(([wx, wy, ww], i) => {
+      const wob = ((h >> (i * 4)) % 5) - 2;
+      g.lineBetween(px + wx + wob, py + wy, px + wx + ww + wob, py + wy);
+    });
+  }
+
+  private paintFarmable(g: Phaser.GameObjects.Graphics, px: number, py: number, season: Season, h: number): void {
+    const ripe = season === Season.Autumn || season === Season.Summer;
+    const wheat = ripe ? 0xc4a452 : 0x8a8a48;
+    const soil = ripe ? 0x8a7038 : 0x6a5c34;
+
+    for (let r = -1; r <= 1; r++) {
+      const y = py + r * 8 - 2;
+      g.lineStyle(2, soil, 0.85);
+      g.lineBetween(px - 12, y + 2, px - 3, y - 1);
+      g.lineBetween(px + 1, y - 2, px + 12, y - 5);
+      g.fillStyle(wheat, 1);
+      for (let cIdx = 0; cIdx < 4; cIdx++) {
+        const t = cIdx / 3;
+        const x1 = Phaser.Math.Linear(-12, -3, t);
+        const y1 = Phaser.Math.Linear(y + 2, y - 1, t);
+        if ((h >> (cIdx + r * 3 + 4)) % 4 !== 0) g.fillCircle(px + x1, y1 - 1.6, 1.5);
+        const x2 = Phaser.Math.Linear(1, 12, t);
+        const y2 = Phaser.Math.Linear(y - 2, y - 5, t);
+        if ((h >> (cIdx + r * 3 + 9)) % 4 !== 0) g.fillCircle(px + x2, y2 - 1.6, 1.5);
+      }
+    }
+  }
+
+  private paintGrassDetails(g: Phaser.GameObjects.Graphics, px: number, py: number, season: Season, h: number): void {
+    g.fillStyle(0x000000, 0.045);
+    g.fillEllipse(px - 6 + (h % 9), py + 3 - ((h >> 2) % 9), 13, 7);
+    g.fillEllipse(px + 7 - ((h >> 5) % 11), py - 4 + ((h >> 7) % 10), 11, 6);
+    g.fillStyle(0xffffff, 0.05);
+    g.fillEllipse(px + 2 + ((h >> 3) % 12) - 6, py - 6 + ((h >> 6) % 8), 12, 6);
+
+    if (season === Season.Winter) {
+      if (h % 4 === 0) {
+        g.fillStyle(0xf0f4f8, 0.5);
+        g.fillEllipse(px - 5 + (h % 10), py - 3 + (h % 7), 9, 3.4);
+      }
+      return;
+    }
+    if (h % 4 === 0) {
+      const gx = px - 10 + (h % 20);
+      const gy = py - 8 + ((h >> 4) % 16);
+      g.lineStyle(1, 0x8a9a4e, 0.9);
+      g.lineBetween(gx, gy, gx - 2, gy - 3.5);
+      g.lineBetween(gx, gy, gx + 1.5, gy - 4);
+      g.lineBetween(gx + 3, gy + 1, gx + 4.2, gy - 2.4);
+    }
+    if (h % 13 === 0) {
+      const fx = px - 9 + ((h >> 3) % 18);
+      const fy = py - 6 + ((h >> 6) % 13);
+      g.fillStyle(0xc05038, 0.95);
+      g.fillCircle(fx, fy, 1.5);
+      g.fillStyle(0x3a3228, 0.8);
+      g.fillCircle(fx, fy, 0.55);
+    }
+    if (h % 19 === 0) {
+      const sx = px - 10 + ((h >> 5) % 20);
+      const sy = py + 2 + ((h >> 8) % 8);
+      g.fillStyle(0xa8a094, 0.8);
+      g.fillEllipse(sx, sy, 4.4, 2.6);
+    }
+  }
+
+  // --- bâtiments ---------------------------------------------------------
+
+  private drawBuildings(state: GameState): void {
+    const g = this.buildingGfx;
+    g.clear();
 
     for (const building of state.buildings) {
+      const { x: cx, y: cy } = hexCenter(building.gridX, building.gridY);
+      g.fillStyle(0x000000, 0.18);
+      g.fillEllipse(cx + 2, cy + 11, 34, 9);
+      const painter = BUILDING_PAINTERS[building.type];
+      if (painter) painter(g, cx, cy);
+
+      // barre de progression du cycle de production (rouge si entrante manquante)
       const def = BUILDINGS[building.type];
-      const cx = building.gridX * TILE_SIZE + (def.size.w * TILE_SIZE) / 2;
-      const cy = building.gridY * TILE_SIZE + (def.size.h * TILE_SIZE) / 2;
-
-      this.shadowLayer.fillStyle(0x000000, 0.15);
-      this.shadowLayer.fillEllipse(cx + 2, cy + 6, def.size.w * TILE_SIZE * 0.7, def.size.h * TILE_SIZE * 0.3);
-
-      const visual = BUILDING_VISUALS.find((v) => v.type === building.type);
-      if (visual) {
-        const objs = visual.draw(this.scene, cx, cy);
-        const container = this.scene.add.container(0, 0);
-        for (const obj of objs) {
-          container.add(obj);
-        }
-        this.container.add(container);
-        this.buildingGfx.push(container);
+      let cycle = 0;
+      let blocked = false;
+      if (building.active) {
+        if (def.production) {
+          cycle = def.production.ticksPerCycle;
+          for (const [res, amt] of Object.entries(def.production.input)) {
+            if (amt && state.resources[res as keyof typeof state.resources] < amt) blocked = true;
+          }
+        } else if (building.type === BuildingType.Forester) cycle = 5;
+        else if (building.type === BuildingType.HuntingCabin) cycle = 4;
+      }
+      if (cycle > 0) {
+        const p = Math.min(1, building.productionTimer / cycle);
+        g.fillStyle(0x000000, 0.45);
+        g.fillRoundedRect(cx - 9, cy + 14, 18, 3.5, 1.75);
+        g.fillStyle(blocked ? 0xd4645a : 0xc9a84c, 0.9);
+        g.fillRoundedRect(cx - 9, cy + 14, Math.max(1.5, 18 * p), 3.5, 1.75);
       }
     }
+  }
 
-    if (this.buildingGfx.length > 0) {
-      this.container.moveBelow(this.shadowLayer as any, this.buildingGfx[0] as any);
+  // --- synchronisation ---------------------------------------------------
+
+  sync(state: GameState): void {
+    this.currentSeason = state.season;
+
+    const terrainSig =
+      state.season +
+      "|" +
+      state.tiles.map((row) => row.map((t) => t.type[0] + (t.buildingId !== null ? "b" : "")).join("")).join(";");
+
+    if (terrainSig !== this.lastTerrainSig) {
+      this.lastTerrainSig = terrainSig;
+      this.terrainGfx.clear();
+      for (let y = 0; y < GRID_ROWS; y++) {
+        for (let x = 0; x < GRID_COLS; x++) {
+          const tile = state.tiles[y][x];
+          const { x: cx, y: cy } = hexCenter(x, y);
+          this.paintHex(this.terrainGfx, cx, cy, tileColor(tile.type, x, y, state.season));
+          if (tile.type === TileType.Water) {
+            this.paintCoast(this.terrainGfx, state, x, y);
+          }
+        }
+      }
+      this.drawDecorations(state);
+      this.updateMinimap(state);
     }
 
-    this.container.bringToTop(this.hoverHighlight);
+    const buildingSig = state.buildings.map((b) => `${b.id}:${b.type}:${b.gridX},${b.gridY}`).join(",");
+    if (buildingSig !== this.lastBuildingSig) {
+      this.lastBuildingSig = buildingSig;
+      this.drawBuildings(state);
+      this.updateMinimap(state);
+    }
+
+    this.container.bringToTop(this.overlayGfx);
+  }
+
+  private updateMinimap(state: GameState): void {
+    if (!this.minimapBuilt || !this.minimapContainer) return;
 
     for (let y = 0; y < GRID_ROWS; y++) {
       for (let x = 0; x < GRID_COLS; x++) {
         const tile = state.tiles[y][x];
-        const px = this.minimapPixels[y][x];
+        let color: number = tileColor(tile.type, x, y, state.season);
         if (tile.buildingId !== null) {
           const building = state.buildings.find((b) => b.id === tile.buildingId);
-          if (building) {
-            px.setFillStyle(BUILDINGS[building.type].color);
-          } else {
-            px.setFillStyle(tileColor(tile.type, x, y, state.season));
-          }
-        } else {
-          px.setFillStyle(tileColor(tile.type, x, y, state.season));
+          if (building) color = MINIMAP_COLOR[building.type] ?? color;
         }
+        this.minimapPixels[y][x].fillColor = color;
       }
     }
 
     this.minimapCam.clear();
-    const camW = Math.floor(this.scene.cameras.main.width / this.scene.cameras.main.zoom);
-    const camH = Math.floor(this.scene.cameras.main.height / this.scene.cameras.main.zoom);
-    const camX = Math.floor(-this.scene.cameras.main.scrollX / this.scene.cameras.main.zoom);
-    const camY = Math.floor(-this.scene.cameras.main.scrollY / this.scene.cameras.main.zoom);
-    const mmScale = 4;
-    this.minimapCam.lineStyle(1, 0xffffff, 0.6);
+    const cam = this.scene.cameras.main;
+    const vw = cam.width / cam.zoom;
+    const vh = cam.height / cam.zoom;
+    const mmW = GRID_COLS * this.MM_SCALE;
+    const mmH = GRID_ROWS * this.MM_SCALE;
+    this.minimapCam.lineStyle(1.4, 0xe8cc78, 0.85);
     this.minimapCam.strokeRect(
-      (camX / TILE_SIZE) * mmScale,
-      (camY / TILE_SIZE) * mmScale,
-      (camW / TILE_SIZE) * mmScale,
-      (camH / TILE_SIZE) * mmScale
+      (-cam.scrollX / MAP_W) * mmW,
+      (-cam.scrollY / MAP_H) * mmH,
+      (vw / MAP_W) * mmW,
+      (vh / MAP_H) * mmH
     );
   }
 
-  showHover(gridX: number, gridY: number, valid: boolean): void {
-    this.hoverHighlight.setPosition(
-      gridX * TILE_SIZE + TILE_SIZE / 2,
-      gridY * TILE_SIZE + TILE_SIZE / 2
-    );
-    this.hoverHighlight.setSize(TILE_SIZE, TILE_SIZE);
-    this.hoverHighlight.setStrokeStyle(2, 0xc9a84c, 0.7);
-    this.hoverHighlight.setFillStyle(0xc9a84c, 0.08);
-    this.hoverHighlight.setVisible(true);
+  showHover(col: number, row: number): void {
+    const { x, y } = hexCenter(col, row);
+    const pts = this.cornersAt(x, y);
+    const g = this.overlayGfx;
+    g.clear();
+    g.fillStyle(0xf5efdf, 0.1);
+    g.fillPoints(pts as unknown as Phaser.Geom.Point[], true);
+    g.lineStyle(2.2, 0xe8cc78, 0.9);
+    const closed = [...pts, pts[0]];
+    for (let i = 0; i < 6; i++) g.lineBetween(closed[i].x, closed[i].y, closed[i + 1].x, closed[i + 1].y);
   }
 
   hideHover(): void {
-    this.hoverHighlight.setVisible(false);
+    this.overlayGfx.clear();
   }
 
-  setBuildingPreview(type: BuildingType, gridX: number, gridY: number, valid: boolean): void {
-    const def = BUILDINGS[type];
-    const w = def.size.w * TILE_SIZE;
-    const h = def.size.h * TILE_SIZE;
-    this.hoverHighlight.setSize(w - 2, h - 2);
-    this.hoverHighlight.setPosition(gridX * TILE_SIZE + w / 2, gridY * TILE_SIZE + h / 2);
-    this.hoverHighlight.setFillStyle(valid ? 0x8fdc7a : 0xe06a55, valid ? 0.18 : 0.22);
-    this.hoverHighlight.setStrokeStyle(2, valid ? 0x8fdc7a : 0xe06a55, 0.9);
-    this.hoverHighlight.setVisible(true);
+  setBuildingPreview(_type: BuildingType, col: number, row: number, valid: boolean): void {
+    const { x, y } = hexCenter(col, row);
+    const pts = this.cornersAt(x, y);
+    const g = this.overlayGfx;
+    g.clear();
+    const c = valid ? 0x8fdc7a : 0xe06a55;
+    g.fillStyle(c, valid ? 0.16 : 0.2);
+    g.fillPoints(pts as unknown as Phaser.Geom.Point[], true);
+    g.lineStyle(2, c, 0.9);
+    const closed = [...pts, pts[0]];
+    for (let i = 0; i < 6; i++) g.lineBetween(closed[i].x, closed[i].y, closed[i + 1].x, closed[i + 1].y);
   }
 
   clearPreview(): void {
-    this.hoverHighlight.setSize(TILE_SIZE, TILE_SIZE);
-    this.hoverHighlight.setVisible(false);
+    this.overlayGfx.clear();
   }
 
   destroy(): void {
     this.container.destroy();
+    this.minimapContainer?.destroy();
   }
 }

@@ -1,82 +1,88 @@
 import Phaser from "phaser";
 import { GameState } from "../state/GameState";
+import { C, HEX, Viewport, label, plaque } from "./theme";
 
 export class EventLog {
   scene: Phaser.Scene;
   container: Phaser.GameObjects.Container | null = null;
-  visible: boolean = false;
+  visible = false;
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
   }
 
   toggle(state: GameState): void {
-    if (this.visible) {
-      this.hide();
-    } else {
-      this.show(state);
-    }
+    if (this.visible) this.hide();
+    else this.show(state);
   }
 
   show(state: GameState): void {
     this.hide();
     this.visible = true;
-    this.container = this.scene.add.container(0, 0);
+    const c = (this.container = this.scene.add.container(0, 0));
 
-    const overlay = this.scene.add.rectangle(640, 360, 1280, 720, 0x000000, 0.5);
+    const overlay = this.scene.add.rectangle(Viewport.w / 2, Viewport.h / 2, Viewport.w, Viewport.h, 0x000000, 0.5);
     overlay.setInteractive();
-    this.container.add(overlay);
+    c.add(overlay);
 
-    const panelBg = this.scene.add.rectangle(640, 360, 500, 500, 0x0f0f1e, 0.97);
-    panelBg.setStrokeStyle(2, 0xc9a84c, 0.8);
-    this.container.add(panelBg);
+    c.add(plaque(this.scene, Viewport.w / 2, Viewport.h / 2, 520, 500, C.panel, C.panelEdge));
 
-    const title = this.scene.add.text(640, 130, "Event Log", {
-      fontSize: "18px",
-      fontFamily: "Georgia, serif",
-      color: "#c9a84c",
+    const title = label(this.scene, Viewport.w / 2, 138, "CHRONICLE", {
+      size: 20,
+      display: true,
+      color: HEX.brass,
+      origin: 0.5,
     });
-    title.setOrigin(0.5);
-    this.container.add(title);
+    c.add(title);
+
+    const divider = this.scene.add.graphics();
+    divider.lineStyle(1, C.brassDark, 0.5);
+    divider.lineBetween(400, 156, 880, 156);
+    c.add(divider);
 
     const logEntries = state.eventLog.slice(0, 30);
-    let yOff = 160;
+    let yOff = 176;
 
     if (logEntries.length === 0) {
-      const empty = this.scene.add.text(640, 360, "No events yet.", {
-        fontSize: "12px",
-        fontFamily: "Arial, sans-serif",
-        color: "#555555",
+      const empty = label(this.scene, Viewport.w / 2, 360, "Nothing has happened yet.", {
+        size: 12,
+        color: HEX.dim,
+        origin: 0.5,
       });
-      empty.setOrigin(0.5);
-      this.container.add(empty);
+      c.add(empty);
     }
 
     for (const entry of logEntries) {
-      const t = this.scene.add.text(400, yOff, entry, {
-        fontSize: "11px",
-        fontFamily: "'Courier New', monospace",
-        color: "#b0a890",
-        wordWrap: { width: 460 },
+      const isTickPrefix = entry.startsWith("t");
+      const tickEnd = entry.indexOf(":");
+      let entryText = label(this.scene, 410, yOff, entry, {
+        size: 10.5,
+        mono: true,
+        color: HEX.parchment,
+        wordWrap: { width: 470 },
       });
-      this.container.add(t);
-      yOff += 20;
-      if (yOff > 600) break;
+      if (isTickPrefix && tickEnd > 1) {
+        entryText.setColor(HEX.muted);
+      }
+      c.add(entryText);
+      yOff += 19;
+      if (yOff > 580) break;
     }
 
-    const closeBtn = this.scene.add.text(640, 590, "[ Close  \u232B ]", {
-      fontSize: "12px",
-      fontFamily: "'Courier New', monospace",
-      color: "#888888",
+    const closeBtn = label(this.scene, Viewport.w / 2, 592, "Close  \u232B", {
+      size: 12,
+      color: HEX.muted,
+      origin: 0.5,
     });
-    closeBtn.setOrigin(0.5);
     closeBtn.setInteractive({ useHandCursor: true });
     closeBtn.on("pointerdown", () => this.hide());
-    closeBtn.on("pointerover", () => closeBtn.setColor("#c9a84c"));
-    closeBtn.on("pointerout", () => closeBtn.setColor("#888888"));
-    this.container.add(closeBtn);
+    closeBtn.on("pointerover", () => closeBtn.setColor(HEX.brass));
+    closeBtn.on("pointerout", () => closeBtn.setColor(HEX.muted));
+    c.add(closeBtn);
 
-    this.container.setDepth(160);
+    c.setDepth(160);
+    c.setAlpha(0);
+    this.scene.tweens.add({ targets: c, alpha: 1, duration: 140 });
   }
 
   hide(): void {

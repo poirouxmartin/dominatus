@@ -2,7 +2,6 @@ import { BuildingDef, BuildingType, ResourceType, TileType, TechDef, TechBranch 
 
 export const GRID_COLS = 30;
 export const GRID_ROWS = 20;
-export const TILE_SIZE = 40;
 
 export const TICK_RATE_MS = 1000;
 export const SEASON_TICKS = 30;
@@ -18,7 +17,7 @@ export const STARTING_RESOURCES: Record<ResourceType, number> = {
   [ResourceType.Research]: 0,
   [ResourceType.Leather]: 0,
   [ResourceType.Tools]: 0,
-  [ResourceType.Water]: 0,
+  [ResourceType.Water]: 40,
 };
 
 export const STORAGE_BASE = 200;
@@ -248,7 +247,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     },
     populationCapacity: 0,
     populationNeed: 2,
-    size: { w: 2, h: 2 },
+    size: { w: 1, h: 1 },
     requiredTile: TileType.Farmable,
     color: 0x4a7c3f,
   },
@@ -514,13 +513,13 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   [BuildingType.Well]: {
     type: BuildingType.Well,
     name: "Well",
-    description: "Draws fresh water. Produces water, reduces heat in summer.",
+    description: "Draws fresh water for your settlers (1 per tick covers 4 people).",
     cost: { [ResourceType.Wood]: 10, [ResourceType.Stone]: 15 },
     production: {
       input: {},
       output: { [ResourceType.Water]: 3 },
       ticksPerCycle: 3,
-      winterMultiplier: 0.3,
+      winterMultiplier: 0.6,
     },
     populationCapacity: 0,
     populationNeed: 0,
@@ -583,6 +582,8 @@ export const RAID_TOWER_REDUCTION = 0.10;
 
 export const BASE_HAPPINESS = 50;
 export const FOOD_PER_PERSON = 0.5;
+export const WATER_PER_PERSON = 0.25;
+export const THIRST_HAPPINESS_PENALTY = 8;
 export const HAPPINESS_PER_FOOD = 10;
 export const HAPPINESS_PER_HOUSE = 5;
 export const POPULATION_GROWTH_THRESHOLD = 70;
@@ -591,10 +592,10 @@ export const STARVATION_DAMAGE = 2;
 
 export const CITIZEN_HAPPINESS_THRESHOLD = 80;
 export const CITIZEN_FOOD_MULTIPLIER = 1.5;
-export const RESEARCH_PER_PERSON = 0.02;
+export const RESEARCH_PER_PERSON = 0.05;
 
 export const VICTORY_POPULATION = 40;
 export const VICTORY_TECHS = 14;
 
-export const SAVE_KEY = "dominatus_save_v2";
-export const SAVE_VERSION = 2;
+export const SAVE_KEY = "dominatus_save_v3";
+export const SAVE_VERSION = 3;

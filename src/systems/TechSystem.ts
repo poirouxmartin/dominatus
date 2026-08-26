@@ -30,6 +30,7 @@ export class TechSystem {
       state.researchedTechs.push(researching);
       state.researchTarget = null;
       state.researchProgress = 0;
+      state.log(`${tech.name} discovered`);
     }
   }
 }

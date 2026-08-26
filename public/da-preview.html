@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dominatus — Comparatif DA</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #10131c; color: #e8e2d2; font-family: Georgia, 'Times New Roman', serif; padding: 40px 24px 80px; }
+  .wrap { max-width: 1240px; margin: 0 auto; }
+  h1 { text-align: center; font-size: 42px; letter-spacing: 12px; color: #c9a84c; font-weight: normal; margin-bottom: 6px; }
+  .sub { text-align: center; color: #a89a80; font-style: italic; margin-bottom: 14px; }
+  .try { text-align: center; margin-bottom: 48px; color: #a89a80; font-family: Verdana, sans-serif; font-size: 13px; }
+  .try a { color: #e8cc78; text-decoration: none; border: 1px solid #8a6d3b; padding: 6px 14px; border-radius: 6px; margin: 0 6px; display: inline-block; }
+  .try a:hover { background: #c9a84c22; }
+  section { margin-bottom: 64px; border: 1px solid #3a3325; border-radius: 14px; padding: 28px; background: #171a14; }
+  section h2 { font-size: 26px; color: #e8cc78; margin-bottom: 4px; font-weight: normal; }
+  section .tag { color: #a89a80; font-style: italic; margin-bottom: 18px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  figure { margin: 0; }
+  figure img { width: 100%; border-radius: 8px; border: 1px solid #3a3325; display: block; }
+  figcaption { color: #a89a80; font-size: 13px; font-family: Verdana, sans-serif; margin-top: 8px; text-align: center; }
+  .points { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 28px; margin-top: 18px; font-family: Verdana, sans-serif; font-size: 13.5px; line-height: 1.55; }
+  .plus { color: #8fc07a; } .minus { color: #d0907a; }
+  @media (max-width: 900px) { .grid, .points { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>DOMINATUS</h1>
+  <div class="sub">Trois directions artistiques pour l'interface — captures réelles du jeu</div>
+  <div class="try">
+    Essayer en direct :
+    <a href="/?da=1">?da=1</a>
+    <a href="/?da=2">?da=2</a>
+    <a href="/?da=3">?da=3</a>
+  </div>
+
+  <section>
+    <h2>DA 1 — Bronze &amp; Noyer <span style="color:#8fc07a; font-size:15px;">(actuelle)</span></h2>
+    <div class="tag">Encre nocturne chaude, bronze et laiton. Ambiance « soirée strategy ».</div>
+    <div class="grid">
+      <figure><img src="/da/da1-title.png" alt="Titre DA1" /><figcaption>Écran-titre</figcaption></figure>
+      <figure><img src="/da/da1-game.png" alt="Jeu DA1" /><figcaption>En jeu</figcaption></figure>
+    </div>
+    <div class="points">
+      <div class="plus">+ Contraste maximal avec la carte : l'îlot ressort immédiatement</div>
+      <div class="plus">+ Lisibilité longue durée éprouvée (textes ivoire sur noyer)</div>
+      <div class="minus">− UI sombre = plus sobre, moins « jeu de plateau »</div>
+      <div class="minus">− Moins distinctive que les deux autres</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>DA 2 — Parchemin d'Empire</h2>
+    <div class="tag">Panneaux parchemin ivoire, encre brune, liseré bronze. Très jeu de plateau / carte ancienne.</div>
+    <div class="grid">
+      <figure><img src="/da/da2-title.png" alt="Titre DA2" /><figcaption>Écran-titre</figcaption></figure>
+      <figure><img src="/da/da2-game.png" alt="Jeu DA2" /><figcaption>En jeu</figcaption></figure>
+    </div>
+    <div class="points">
+      <div class="plus">+ Très originale — la carte devient un îlot posé sur une table claire</div>
+      <div class="plus">+ Cohérente avec le thème romain (parchemin, encre, sceaux)</div>
+      <div class="minus">− Lisibilité à valider sur les textes petits (encre sur parchemin)</div>
+      <div class="minus">− Changement d'ambiance radical vs l'actuel</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>DA 3 — Marbre &amp; Pourpre</h2>
+    <div class="tag">Fond pourpre impérial profond, panneaux marbre clair à liseré pourpre et or.</div>
+    <div class="grid">
+      <figure><img src="/da/da3-title.png" alt="Titre DA3" /><figcaption>Écran-titre</figcaption></figure>
+      <figure><img src="/da/da3-game.png" alt="Jeu DA3" /><figcaption>En jeu</figcaption></figure>
+    </div>
+    <div class="points">
+      <div class="plus">+ Plus épique / monumental (Total War: Rome)</div>
+      <div class="plus">+ Panneaux clairs = lisibilité, tout en gardant une identité forte</div>
+      <div class="minus">− En jeu, se distingue peu de la DA 2 (panneaux clairs aussi)</div>
+      <div class="minus">− Pourpre + or = plus chargé que DA2</div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
