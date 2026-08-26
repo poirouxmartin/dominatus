@@ -595,6 +595,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     requiredTech: "conscription",
     color: 0x8a4a3a,
   },
+  [BuildingType.Fishery]: {
+    type: BuildingType.Fishery,
+    name: "Fishery",
+    description: "Built on water. Nets bring 3 food per 4 ticks \u2014 keeps working through winter (slower).",
+    cost: { [ResourceType.Wood]: 20, [ResourceType.Planks]: 10 },
+    production: {
+      input: {},
+      output: { [ResourceType.Food]: 3 },
+      ticksPerCycle: 4,
+      winterMultiplier: 0.6,
+    },
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: TileType.Water,
+    color: 0x6a8a5a,
+  },
   [BuildingType.Forester]: {
     type: BuildingType.Forester,
     name: "Forester",

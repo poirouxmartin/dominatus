@@ -535,6 +535,29 @@ const BUILDING_PAINTERS: Record<BuildingType, Painter> = {
     g.fillStyle(BP.canvasRed, 1);
     g.fillTriangle(cx + 12, cy - 19, cx + 12, cy - 15, cx + 18, cy - 17);
   },
+
+  [BuildingType.Fishery]: (g, cx, cy) => {
+    g.fillStyle(0x000000, 0.12);
+    g.fillEllipse(cx, cy + 9, 30, 8);
+    bx(g, cx - 12, cy - 6, 15, 11, BP.timber);
+    gable(g, cx - 4.5, cy - 6, 17, 7, 0x6a5a3a, 0x54462e);
+    bx(g, cx - 8, cy - 1, 4.5, 6, BP.timberDk);
+    g.fillStyle(BP.window, 0.9);
+    g.fillCircle(cx - 1, cy - 2, 1.4);
+    g.lineStyle(2.4, 0x8a6a42, 1);
+    g.lineBetween(cx + 3, cy + 5, cx + 15, cy + 8);
+    g.lineBetween(cx + 3, cy + 1, cx + 15, cy + 4);
+    g.lineStyle(2, 0x6a5232, 1);
+    for (const px of [cx + 6, cx + 11, cx + 15]) {
+      g.lineBetween(px, cy + 6, px, cy + 10);
+    }
+    g.fillStyle(0x8a5a3a, 1);
+    g.fillRoundedRect(cx + 8, cy + 1, 5, 4, 1.5);
+    g.fillStyle(0xc0d8e8, 1);
+    g.fillCircle(cx + 10, cy + 1, 1);
+    g.lineStyle(1.2, BP.timber, 1);
+    g.lineBetween(cx + 10.5, cy + 1, cx + 13, cy - 4);
+  },
 };
 
 const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
@@ -564,6 +587,7 @@ const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
   [BuildingType.Bathhouse]: 0xc9b884,
   [BuildingType.Amphitheater]: 0xd0a878,
   [BuildingType.Barracks]: 0x8a4a3a,
+  [BuildingType.Fishery]: 0x6a8a5a,
 };
 
 export class TileMap {
