@@ -2,8 +2,9 @@
 import { BuildingType, ResourceType } from "../types";
 import { GameState } from "../state/GameState";
 import { BUILDINGS } from "../config";
-import { C, HEX, Viewport, label, plaque } from "./theme";
+import { C, HEX, BUILD_BAR_H, Viewport, label, plaque } from "./theme";
 import { drawIcon, type IconKey } from "./icons";
+import { drawBuildingPictogram } from "../map/TileMap";
 import { AudioManager } from "../audio/AudioManager";
 
 const SHORTCUTS: Partial<Record<BuildingType, number>> = {
@@ -35,7 +36,7 @@ interface BuildButton {
   type: BuildingType;
   bg: Phaser.GameObjects.Graphics;
   hit: Phaser.GameObjects.Rectangle;
-  label: Phaser.GameObjects.Text;
+  pict: Phaser.GameObjects.Graphics;
   costGfx: Phaser.GameObjects.Graphics;
   extras: Phaser.GameObjects.Text[];
   locked: boolean;
@@ -142,7 +143,7 @@ export class BuildPanel {
     for (const btn of this.buttons) {
       btn.bg.destroy();
       btn.hit.destroy();
-      btn.label.destroy();
+      btn.pict.destroy();
       btn.costGfx.destroy();
       for (const extra of btn.extras) extra.destroy();
     }
@@ -240,26 +241,16 @@ export class BuildPanel {
     const edge = locked ? C.panelEdge : canAfford ? C.brassDark : C.panelEdge;
 
     const bg = plaque(this.scene, cx, cy, w - 1, CARD_H, baseFill, edge);
-    const labelColor = locked ? HEX.dim : canAfford ? HEX.ivory : HEX.muted;
-    const txt = label(this.scene, cx, cy - CARD_H / 2 + 8, def.name, {
-      size: 9.5,
-      color: labelColor,
-      origin: { x: 0.5, y: 0 },
-      wordWrap: { width: w - 10 },
-      align: "center",
-      lineSpacing: 1,
-    });
-    const maxW = w - 10;
-    if (txt.width > maxW) {
-      const ratio = maxW / txt.width;
-      if (ratio >= 0.8) txt.setScale(ratio);
-      else fitLabel(txt, maxW);
-    }
+
+    // pictogramme dominant : le bâtiment lui-même, miniature du rendu carte
+    const pict = this.scene.add.graphics();
+    drawBuildingPictogram(pict, type, cx, cy - 10, 0.85);
+    this.container.add(pict);
 
     const shortcut = SHORTCUTS[type];
     if (shortcut && !locked) {
       const badge = label(this.scene, cx - w / 2 + 5, cy - CARD_H / 2 + 4, `${shortcut}`, {
-        size: 9,
+        size: 10,
         mono: true,
         color: "#8a6d3b",
         origin: { x: 0, y: 0 },
@@ -272,17 +263,17 @@ export class BuildPanel {
     const extras: Phaser.GameObjects.Text[] = [];
     if (!locked) {
       const nCost = Object.entries(def.cost).filter(([, a]) => a).length;
-      const pitch = 20;
+      const pitch = 22;
       let ix = cx - ((nCost - 1) * pitch) / 2 - 6;
       for (const [res, amt] of Object.entries(def.cost)) {
         if (!amt) continue;
         const resType = res as ResourceType;
         const hasEnough = (state.resources[resType] ?? 0) >= amt;
-        drawIcon(costGfx, RES_ICON_KEYS[resType] ?? resType, ix, cy + 13, 5);
-        const amtTxt = label(this.scene, ix + 7.5, cy + 13, `${amt}`, {
-          size: 9.5,
+        drawIcon(costGfx, RES_ICON_KEYS[resType] ?? resType, ix, cy + 30, 6);
+        const amtTxt = label(this.scene, ix + 8, cy + 30, `${amt}`, {
+          size: 10,
           mono: true,
-          color: hasEnough ? HEX.muted : HEX.bad,
+          color: hasEnough ? HEX.parchment : HEX.bad,
           origin: { x: 0, y: 0.5 },
         });
         this.container.add(amtTxt);
@@ -290,10 +281,10 @@ export class BuildPanel {
         ix += pitch;
       }
       if (def.requiredTile) {
-        drawIcon(costGfx, def.requiredTile as IconKey, ix + 6, cy + 13, 5);
+        drawIcon(costGfx, def.requiredTile as IconKey, ix + 6, cy + 30, 6);
       }
     } else {
-      drawIcon(costGfx, "lock", cx, cy + 11, 5.5);
+      drawIcon(costGfx, "lock", cx, cy + 8, 7);
     }
 
     const hit = this.scene.add.rectangle(cx, cy, w, CARD_H + 4, 0xffffff, 0.001);
@@ -320,8 +311,8 @@ export class BuildPanel {
       this.hideTooltip();
     });
 
-    this.container.add([bg, costGfx, txt, hit]);
-    return { type, bg, hit, label: txt, costGfx, extras, locked, baseFill };
+    this.container.add([bg, costGfx, pict, hit]);
+    return { type, bg, hit, pict, costGfx, extras, locked, baseFill };
   }
 
   private showTooltip(type: BuildingType, cx: number): void {
@@ -464,7 +455,6 @@ export class BuildPanel {
       const w = btn.hit.width - 1;
       const h = CARD_H;
       repaint(btn.bg, cx, cy, w, h, selected ? C.panelHi : btn.baseFill, selected ? C.brassBright : btn.locked ? C.panelEdge : C.panelEdge);
-      btn.label.setColor(selected ? HEX.brassBright : btn.locked ? HEX.dim : HEX.ivory);
     }
   }
 

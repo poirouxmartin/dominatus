@@ -3,6 +3,10 @@
 export const DESIGN_W = 1280;
 export const DESIGN_H = 720;
 
+/** Hauteurs des barres d'interface (partagées HUD / BuildPanel / TileMap / GameScene). */
+export const TOP_BAR_H = 68;
+export const BUILD_BAR_H = 118;
+
 /**
  * Zoom designâ†’backing. Mis Ã  jour par main.ts (backing = fenÃªtre Ã— DPR,
  * donc le rendu est toujours 1:1 avec les pixels physiques).

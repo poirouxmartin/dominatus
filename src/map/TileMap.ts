@@ -9,7 +9,7 @@ import {
   hexCorners,
   neighbors as hexNeighbors,
 } from "./hex";
-import { Viewport, C, RenderScale } from "../ui/theme";
+import { Viewport, C, RenderScale, BUILD_BAR_H } from "../ui/theme";
 
 type RGB = { r: number; g: number; b: number };
 interface Corner {
@@ -754,7 +754,7 @@ export class TileMap {
     this.mmW = w;
     this.mmH = h;
 
-    this.minimapContainer = ui.add.container(Viewport.w - w - 16, Viewport.h - 76 - 12 - h);
+    this.minimapContainer = ui.add.container(Viewport.w - w - 16, Viewport.h - BUILD_BAR_H - 12 - h);
 
     const frame = ui.add.graphics();
     frame.fillStyle(C.panel, 0.94);
@@ -800,7 +800,7 @@ export class TileMap {
       "renderscale",
       () => {
         if (this.minimapContainer) {
-          this.minimapContainer.setPosition(Viewport.w - this.mmW - 16, Viewport.h - 76 - 12 - this.mmH);
+          this.minimapContainer.setPosition(Viewport.w - this.mmW - 16, Viewport.h - BUILD_BAR_H - 12 - this.mmH);
         }
       },
       this
@@ -1226,4 +1226,24 @@ export class TileMap {
       if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
     }
   }
+}
+
+/** Dessine la vignette d'un bâtiment (réutilise les peintres de la carte). */
+export function drawBuildingPictogram(
+  g: Phaser.GameObjects.Graphics,
+  type: BuildingType,
+  cx: number,
+  cy: number,
+  scale: number
+): void {
+  const painter = BUILDING_PAINTERS[type];
+  if (!painter) return;
+  const px = g.x;
+  const py = g.y;
+  const ps = g.scale;
+  g.setPosition(cx, cy);
+  g.setScale(scale);
+  painter(g, 0, 0);
+  g.setPosition(px, py);
+  g.setScale(ps);
 }
