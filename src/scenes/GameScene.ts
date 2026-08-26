@@ -261,6 +261,11 @@ export class GameScene extends Phaser.Scene {
   private updateAmbience(): void {
     const kind = this.state.season === Season.Autumn ? "rain" : this.state.season === Season.Winter ? "wind" : null;
     AudioManager.inst.startAmbience(kind);
+    if (this.state.season === Season.Spring || this.state.season === Season.Summer) {
+      AudioManager.inst.startBirdsong();
+    } else {
+      AudioManager.inst.stopAmbience();
+    }
   }
 
   private onBeforeUnload = (): void => {
@@ -530,6 +535,7 @@ export class GameScene extends Phaser.Scene {
       const msgs = this.state.processEvents();
       for (const msg of msgs) {
         AudioManager.inst.playSfx(msg.includes("Raid") ? "raid" : "alert");
+        if (msg.includes("Raid")) this.cameras.main.shake(280, 0.004);
         this.hud?.pushToast(msg);
       }
 

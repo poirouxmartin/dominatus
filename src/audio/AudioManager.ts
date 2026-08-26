@@ -231,11 +231,12 @@ export class AudioManager {
     }
   }
 
-  // --- ambiances (pluie / vent) --------------------------------------------
+  // --- ambiances (pluie / vent / oiseaux) ----------------------------------
 
   private ambienceSource: AudioBufferSourceNode | null = null;
   private ambienceGain: GainNode | null = null;
   private ambienceLfo: OscillatorNode | null = null;
+  private birdsongTimer: number | null = null;
 
   /** Boucle d'ambiance : 'rain' (automne) ou 'wind' (hiver), null pour stopper. */
   startAmbience(kind: "rain" | "wind" | null): void {
@@ -297,6 +298,41 @@ export class AudioManager {
     this.ambienceSource = null;
     this.ambienceGain = null;
     this.ambienceLfo = null;
+    if (this.birdsongTimer !== null) {
+      window.clearInterval(this.birdsongTimer);
+      this.birdsongTimer = null;
+    }
+  }
+
+  /** Gazouillis procéduraux : 2-4 notes aiguës glissées, très discrets. */
+  private playChirp(): void {
+    if (!this.ctx || !this.musicGain || this.muted) return;
+    const t = this.ctx.currentTime + 0.05;
+    const notes = 2 + Math.floor(Math.random() * 3);
+    const base = 2400 + Math.random() * 1400;
+    for (let i = 0; i < notes; i++) {
+      const o = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      const st = t + i * 0.09;
+      o.type = "sine";
+      o.frequency.setValueAtTime(base, st);
+      o.frequency.exponentialRampToValueAtTime(base * (1.2 + Math.random() * 0.4), st + 0.06);
+      g.gain.setValueAtTime(0.0001, st);
+      g.gain.exponentialRampToValueAtTime(0.018, st + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, st + 0.08);
+      o.connect(g);
+      g.connect(this.musicGain);
+      o.start(st);
+      o.stop(st + 0.1);
+    }
+  }
+
+  startBirdsong(): void {
+    this.ensure();
+    if (!this.ctx || this.birdsongTimer !== null) return;
+    this.birdsongTimer = window.setInterval(() => {
+      if (Math.random() < 0.55) this.playChirp();
+    }, 3200);
   }
 
   /** ThÃ¨me de fin : fanfare majeure (victoire) ou dirge mineur (dÃ©faite). */
