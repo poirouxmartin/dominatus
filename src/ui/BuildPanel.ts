@@ -80,7 +80,7 @@ const CATEGORIES: { key: string; label: string; types: BuildingType[] }[] = [
   {
     key: "military",
     label: "MILITARY",
-    types: [BuildingType.Wall, BuildingType.Tower],
+    types: [BuildingType.Wall, BuildingType.Tower, BuildingType.Barracks],
   },
 ];
 
@@ -364,6 +364,8 @@ export class BuildPanel {
         prodLine = "-2 water/t each \u2192 +12 happiness (while supplied)";
       } else if (type === BuildingType.Amphitheater) {
         prodLine = "-5 gold/5t \u2192 +20 happiness (+8 each extra, while funded)";
+      } else if (type === BuildingType.Barracks) {
+        prodLine = "-1 tool, -1 leather/5t \u2192 +10% raid defense each";
       }
     } else if (def.populationCapacity > 0) {
       prodLine = `Houses ${def.populationCapacity} settlers`;

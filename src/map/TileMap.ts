@@ -518,6 +518,23 @@ const BUILDING_PAINTERS: Record<BuildingType, Painter> = {
     g.fillRect(cx - 16, cy - 6, 3, 3);
     g.fillRect(cx + 13, cy - 6, 3, 3);
   },
+
+  [BuildingType.Barracks]: (g, cx, cy) => {
+    bx(g, cx - 14, cy - 4, 28, 13, BP.timber);
+    bx(g, cx - 14, cy - 4, 28, 2.2, 0x8a6538);
+    gable(g, cx, cy - 4, 30, 8, 0x8a4434, 0x6a3326);
+    bx(g, cx - 4, cy + 2, 7, 7, BP.timberDk);
+    g.lineStyle(1.5, BP.timberDk, 1);
+    g.lineBetween(cx - 14, cy + 2, cx + 14, cy + 2);
+    for (const sx of [cx - 10, cx - 3, cx + 4, cx + 11]) {
+      g.lineStyle(1.6, 0xb8bcc4, 1);
+      g.lineBetween(sx, cy + 8, sx + 2.5, cy + 1);
+    }
+    g.lineStyle(1.4, BP.timber, 1);
+    g.lineBetween(cx + 12, cy - 12, cx + 12, cy - 19);
+    g.fillStyle(BP.canvasRed, 1);
+    g.fillTriangle(cx + 12, cy - 19, cx + 12, cy - 15, cx + 18, cy - 17);
+  },
 };
 
 const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
@@ -546,6 +563,7 @@ const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
   [BuildingType.Aqueduct]: 0x9aa0aa,
   [BuildingType.Bathhouse]: 0xc9b884,
   [BuildingType.Amphitheater]: 0xd0a878,
+  [BuildingType.Barracks]: 0x8a4a3a,
 };
 
 export class TileMap {

@@ -43,6 +43,7 @@ export enum BuildingType {
   Aqueduct = "aqueduct",
   Bathhouse = "bathhouse",
   Amphitheater = "amphitheater",
+  Barracks = "barracks",
   Forester = "forester",
   HuntingCabin = "huntingCabin",
 }

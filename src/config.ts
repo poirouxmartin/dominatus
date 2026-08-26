@@ -578,6 +578,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     requiredTech: "democracy",
     color: 0xd0a878,
   },
+  [BuildingType.Barracks]: {
+    type: BuildingType.Barracks,
+    name: "Barracks",
+    description: "Trains the garrison. +10% raid defense each (cap 90%) \u2014 consumes 1 tool and 1 leather per 5 ticks.",
+    cost: { [ResourceType.Planks]: 30, [ResourceType.Stone]: 20, [ResourceType.Leather]: 10 },
+    production: {
+      input: { [ResourceType.Tools]: 1, [ResourceType.Leather]: 1 },
+      output: {},
+      ticksPerCycle: 5,
+    },
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    requiredTech: "conscription",
+    color: 0x8a4a3a,
+  },
   [BuildingType.Forester]: {
     type: BuildingType.Forester,
     name: "Forester",

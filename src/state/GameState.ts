@@ -549,6 +549,17 @@ export class GameState {
     const wallCount = this.buildings.filter((b) => b.type === BuildingType.Wall).length;
     defense += wallCount * RAID_WALL_REDUCTION;
     defense += this.countTowers() * RAID_TOWER_REDUCTION;
+
+    // casernes : +10% chacune tant que les outillages et cuirs couvrent l'entretien
+    const barracks = this.buildings.filter((b) => b.type === BuildingType.Barracks).length;
+    if (
+      barracks > 0 &&
+      this.resources[ResourceType.Tools] >= barracks &&
+      this.resources[ResourceType.Leather] >= barracks
+    ) {
+      defense += barracks * 0.1;
+    }
+
     return Math.min(defense, 0.9);
   }
 
