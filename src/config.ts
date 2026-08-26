@@ -629,6 +629,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     requiredTech: "theology",
     color: 0xd8cdb8,
   },
+  [BuildingType.Library]: {
+    type: BuildingType.Library,
+    name: "Library",
+    description: "Scrolls for the curious. +3 research per tick \u2014 knowledge compounds.",
+    cost: { [ResourceType.Stone]: 40, [ResourceType.Planks]: 30, [ResourceType.Gold]: 20 },
+    production: {
+      input: {},
+      output: { [ResourceType.Research]: 3 },
+      ticksPerCycle: 1,
+    },
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: null,
+    requiredTech: "writing",
+    color: 0xb8a888,
+  },
   [BuildingType.Forester]: {
     type: BuildingType.Forester,
     name: "Forester",

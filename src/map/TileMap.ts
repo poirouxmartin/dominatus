@@ -554,6 +554,26 @@ const BUILDING_PAINTERS: Record<BuildingType, Painter> = {
     g.fillCircle(cx + 5, cy - 1, 1.2);
   },
 
+  [BuildingType.Library]: (g, cx, cy) => {
+    g.fillStyle(0x000000, 0.14);
+    g.fillEllipse(cx, cy + 11, 32, 8);
+    bx(g, cx - 15, cy - 5, 30, 13, BP.marble);
+    bx(g, cx - 15, cy - 5, 30, 2, 0xece3d0);
+    gable(g, cx, cy - 5, 33, 8, 0x8a4434, 0x6a3326);
+    for (const dx of [-11, -4, 4, 11]) {
+      bx(g, cx + dx - 1.4, cy - 3, 2.8, 9, BP.ivory);
+    }
+    for (const dx of [-9, -2, 5]) {
+      g.fillStyle(0x8a6a3a, 0.9);
+      g.fillRect(cx + dx, cy - 1, 4, 2);
+      g.fillStyle(0xc9a84c, 0.8);
+      g.fillRect(cx + dx + 0.6, cy - 0.6, 2.8, 1.2);
+    }
+    bx(g, cx - 15, cy + 8, 30, 2, 0xcfc6b2);
+    g.fillStyle(0x8ab5d8, 0.9);
+    g.fillCircle(cx + 12, cy - 8, 1.5);
+  },
+
   [BuildingType.Fishery]: (g, cx, cy) => {    g.fillStyle(0x000000, 0.12);
     g.fillEllipse(cx, cy + 9, 30, 8);
     bx(g, cx - 12, cy - 6, 15, 11, BP.timber);
@@ -606,6 +626,7 @@ const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
   [BuildingType.Barracks]: 0x8a4a3a,
   [BuildingType.Fishery]: 0x6a8a5a,
   [BuildingType.Temple]: 0xd8cdb8,
+  [BuildingType.Library]: 0xb8a888,
 };
 
 export class TileMap {

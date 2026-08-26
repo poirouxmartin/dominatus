@@ -75,7 +75,7 @@ const CATEGORIES: { key: string; label: string; types: BuildingType[] }[] = [
   {
     key: "knowledge",
     label: "KNOWLEDGE",
-    types: [BuildingType.ResearchLab, BuildingType.Academy],
+    types: [BuildingType.ResearchLab, BuildingType.Library, BuildingType.Academy],
   },
   {
     key: "military",
