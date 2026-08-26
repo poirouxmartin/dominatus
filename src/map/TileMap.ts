@@ -708,11 +708,12 @@ export class TileMap {
     this.container.add([this.terrainGfx, this.detailGfx, this.buildingGfx, this.barsGfx, this.overlayGfx]);
   }
 
-  /** Baking : fige une couche Graphics en texture haute résolution (rendu = 1 draw). */
+  /** Baking : fige une couche Graphics en texture ×2 (net même à zoom max). */
   private bake(key: "wx-terrain" | "wx-detail" | "wx-build", g: Phaser.GameObjects.Graphics): void {
     if (this.scene.textures.exists(key)) this.scene.textures.remove(key);
-    g.setScale(this.rs);
-    g.generateTexture(key, Math.ceil(MAP_W * this.rs) + 8, Math.ceil(MAP_H * this.rs) + 8);
+    const f = Math.max(2, Math.ceil(this.rs));
+    g.setScale(f);
+    g.generateTexture(key, Math.ceil(MAP_W * f) + 16, Math.ceil(MAP_H * f) + 16);
     g.setScale(1);
     g.setVisible(false);
 
@@ -724,7 +725,7 @@ export class TileMap {
     } else {
       img.setTexture(key);
     }
-    img.setScale(1 / this.rs);
+    img.setScale(1 / f);
     img.setVisible(true);
   }
 
