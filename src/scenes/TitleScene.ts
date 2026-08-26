@@ -110,7 +110,7 @@ export class TitleScene extends Phaser.Scene {
       origin: { x: 0, y: 1 },
     });
 
-    label(this, width - 14, height - 12, "v0.4.0 \u2014 Hexlands", {
+    label(this, width - 14, height - 12, "v0.5.0 \u2014 Hexlands", {
       size: 10,
       mono: true,
       color: HEX.onInkDim,

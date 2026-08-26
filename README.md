@@ -26,7 +26,7 @@ npm run dev        # → http://localhost:5174/
 
 - **Carte hexagonale** générée (île entourée de mer, biomes en massifs : forêts de cyprès, montagnes, terres cultivables)
 - **4 saisons** de 30 ticks : hiver ralentit les fermes, météo particulaire (neige, pluie, pétales), musique générative par saison
-- **32 bâtiments romains** : chaque ressource a sa chaîne (bois → planches → caserne, pierre → briques → thermes, or → amphithéâtre…)
+- **31 bâtiments romains** : chaque ressource a sa chaîne (bois → planches → caserne, pierre → briques → thermes, or → amphithéâtre…)
 - **Économie à débouchés** : l'eau nourrit thermes, l'or finance l'amphithéâtre et le Circus Maximus, le cuir et les outils arment la caserne
 - **Événements contextuels** : tempêtes, raids, caravanes, récoltes exceptionnelles, marchands, colons errants…
 - **2 voies de victoire** :
