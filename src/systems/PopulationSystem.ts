@@ -24,6 +24,7 @@ export class PopulationSystem {
     let towerCount = 0;
     let chapelCount = 0;
     let tavernCount = 0;
+    let bathhouseCount = 0;
 
     for (const b of state.buildings) {
       const def = BUILDINGS[b.type];
@@ -35,6 +36,7 @@ export class PopulationSystem {
       if (b.type === BuildingType.Tower) towerCount++;
       if (b.type === BuildingType.Chapel) chapelCount++;
       if (b.type === BuildingType.Tavern) tavernCount++;
+      if (b.type === BuildingType.Bathhouse) bathhouseCount++;
     }
 
     const foodMultiplier = state.population.tier >= 2 ? CITIZEN_FOOD_MULTIPLIER : 1;
@@ -50,7 +52,13 @@ export class PopulationSystem {
     }
 
     // formule centralisée dans GameState (source unique avec le panneau Province)
-    const happiness = state.computeHappiness(hasEnoughFood, hasWater, capacity).total;
+    let bathHappy = 0;
+    if (bathhouseCount > 0 && state.resources[ResourceType.Water] >= bathhouseCount * 2) {
+      bathHappy = bathhouseCount * 12;
+    }
+    const extraParts: [string, number][] =
+      bathHappy > 0 ? [["Bathhouses \u00d7" + bathhouseCount, bathHappy]] : [];
+    const happiness = state.computeHappiness(hasEnoughFood, hasWater, capacity, extraParts).total;
     state.population.happiness = happiness;
 
     state.tempHappiness *= 0.9;

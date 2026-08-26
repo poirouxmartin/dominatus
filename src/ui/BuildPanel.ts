@@ -50,7 +50,7 @@ const CATEGORIES: { key: string; label: string; types: BuildingType[] }[] = [
   {
     key: "village",
     label: "VILLAGE",
-    types: [BuildingType.House, BuildingType.Farm, BuildingType.Well, BuildingType.Garden, BuildingType.Chapel],
+    types: [BuildingType.House, BuildingType.Farm, BuildingType.Well, BuildingType.Bathhouse, BuildingType.Garden, BuildingType.Chapel],
   },
   {
     key: "production",
@@ -64,6 +64,7 @@ const CATEGORIES: { key: string; label: string; types: BuildingType[] }[] = [
       BuildingType.Brickyard,
       BuildingType.Tannery,
       BuildingType.Forge,
+      BuildingType.Aqueduct,
     ],
   },
   {
@@ -359,6 +360,9 @@ export class BuildPanel {
         .map(([r, a]) => `-${a} ${r}`)
         .join(", ");
       prodLine = `${inStr ? inStr + "  \u2192  " : ""}${outStr}   (${def.production.ticksPerCycle}t)`;
+      if (type === BuildingType.Bathhouse) {
+        prodLine = "-2 water/t each \u2192 +12 happiness (while supplied)";
+      }
     } else if (def.populationCapacity > 0) {
       prodLine = `Houses ${def.populationCapacity} settlers`;
     } else if (type === BuildingType.Forester) {

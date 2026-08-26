@@ -40,6 +40,8 @@ export enum BuildingType {
   Tower = "tower",
   Chapel = "chapel",
   Well = "well",
+  Aqueduct = "aqueduct",
+  Bathhouse = "bathhouse",
   Forester = "forester",
   HuntingCabin = "huntingCabin",
 }

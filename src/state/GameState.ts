@@ -452,7 +452,8 @@ export class GameState {
   computeHappiness(
     hasEnoughFood: boolean,
     hasWater: boolean,
-    capacity: number
+    capacity: number,
+    extraParts: [string, number][] = []
   ): { total: number; parts: [string, number][] } {
     const parts: [string, number][] = [];
     let happiness = BASE_HAPPINESS;
@@ -533,6 +534,11 @@ export class GameState {
     if (this.population.total > 0 && this.population.total >= capacity) {
       happiness -= 10;
       parts.push(["Overcrowded", -10]);
+    }
+
+    for (const [lbl, v] of extraParts) {
+      happiness += v;
+      parts.push([lbl, v]);
     }
 
     return { total: Math.max(0, Math.min(100, happiness)), parts };

@@ -455,6 +455,46 @@ const BUILDING_PAINTERS: Record<BuildingType, Painter> = {
     g.fillCircle(cx, cy - 2, 2.6);
     bx(g, cx - 1.4, cy + 4, 2.8, 6, 0x8a7d60);
   },
+
+  [BuildingType.Aqueduct]: (g, cx, cy) => {
+    g.lineStyle(4, BP.stone, 1);
+    g.lineBetween(cx - 16, cy - 4, cx + 16, cy - 4);
+    g.lineStyle(2, BP.marbleSh, 1);
+    g.lineBetween(cx - 16, cy - 6, cx + 16, cy - 6);
+    for (const px of [cx - 12, cx, cx + 12]) {
+      g.fillStyle(BP.stone, 1);
+      g.fillRect(px - 2.5, cy - 4, 5, 13);
+      g.fillStyle(BP.stoneDk, 0.7);
+      g.fillRect(px + 1, cy - 4, 1.5, 13);
+      g.fillStyle(BP.stone, 1);
+      g.fillRect(px - 3.5, cy + 2, 7, 2.5);
+    }
+    g.lineStyle(3, BP.waterBlue, 0.85);
+    g.lineBetween(cx - 15, cy - 5, cx + 15, cy - 5);
+    g.lineStyle(1, 0x9ec8dc, 0.5);
+    g.lineBetween(cx - 10, cy - 6, cx - 4, cy - 6);
+  },
+
+  [BuildingType.Bathhouse]: (g, cx, cy) => {
+    bx(g, cx - 13, cy - 4, 26, 13, BP.marble);
+    bx(g, cx - 13, cy - 4, 26, 2, 0xece3d0);
+    g.fillStyle(BP.marbleSh, 1);
+    g.fillCircle(cx, cy - 4, 9);
+    g.fillStyle(BP.terra, 1);
+    g.fillCircle(cx, cy - 4, 6.5);
+    g.fillStyle(BP.marble, 1);
+    g.fillCircle(cx, cy - 4, 4);
+    g.fillStyle(BP.window, 0.9);
+    g.fillCircle(cx - 7, cy + 3, 1.6);
+    g.fillCircle(cx + 7, cy + 3, 1.6);
+    g.fillStyle(0xdfe8ee, 0.5);
+    g.fillCircle(cx + 4, cy - 14, 2.2);
+    g.fillCircle(cx + 6, cy - 18, 1.6);
+    g.fillStyle(BP.stoneDk, 1);
+    g.fillEllipse(cx - 9, cy + 9, 8, 3);
+    g.fillStyle(BP.waterBlue, 0.8);
+    g.fillEllipse(cx - 9, cy + 9, 6, 2);
+  },
 };
 
 const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
@@ -480,6 +520,8 @@ const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
   [BuildingType.Forge]: 0x55606e,
   [BuildingType.Tavern]: 0xb0713e,
   [BuildingType.Chapel]: 0xd8cdb8,
+  [BuildingType.Aqueduct]: 0x9aa0aa,
+  [BuildingType.Bathhouse]: 0xc9b884,
 };
 
 export class TileMap {

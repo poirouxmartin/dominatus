@@ -36,7 +36,7 @@ const RES_ORDER: ResourceType[] = [
 const RES_TIPS: Partial<Record<ResourceType, string>> = {
   [ResourceType.Wood]: "Gathered by Lumber Mills (on forest). Used by most buildings.",
   [ResourceType.Food]: "Eaten by settlers (0.5 each per tick, x1.5 from tier 2). Produced by Farms and Hunting Cabins.",
-  [ResourceType.Water]: "Settlers drink 0.25 each per tick. Drawn from Wells \u2014 one Well covers about 4 settlers.",
+  [ResourceType.Water]: "Settlers drink 0.25 each per tick. Wells cover ~4 settlers; Aqueducts bring 3/t more (they never freeze).",
   [ResourceType.Stone]: "Quarried from Mountains. Needed for advanced buildings.",
   [ResourceType.Gold]: "Currency for trading. Earned at the Market and Trading Post.",
   [ResourceType.Planks]: "Refined at the Sawmill (2 wood each). Needed for advanced buildings.",
