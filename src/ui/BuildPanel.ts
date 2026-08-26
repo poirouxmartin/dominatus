@@ -70,7 +70,7 @@ const CATEGORIES: { key: string; label: string; types: BuildingType[] }[] = [
   {
     key: "trade",
     label: "COMMERCE",
-    types: [BuildingType.Warehouse, BuildingType.Market, BuildingType.TradingPost, BuildingType.Amphitheater, BuildingType.Inn, BuildingType.Tavern],
+    types: [BuildingType.Warehouse, BuildingType.Market, BuildingType.TradingPost, BuildingType.Amphitheater, BuildingType.CircusMaximus, BuildingType.Inn, BuildingType.Tavern],
   },
   {
     key: "knowledge",
@@ -366,6 +366,8 @@ export class BuildPanel {
         prodLine = "-5 gold/5t \u2192 +20 happiness (+8 each extra, while funded)";
       } else if (type === BuildingType.Barracks) {
         prodLine = "-1 tool, -1 leather/5t \u2192 +10% raid defense each";
+      } else if (type === BuildingType.CircusMaximus) {
+        prodLine = "MONUMENT \u2014 +40 happiness, +10 capacity";
       } else if (type === BuildingType.Temple) {
         prodLine = "+2 research/t \u00b7 Happiness: +35 first, +12 each extra";
       }

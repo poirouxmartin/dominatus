@@ -574,6 +574,35 @@ const BUILDING_PAINTERS: Record<BuildingType, Painter> = {
     g.fillCircle(cx + 12, cy - 8, 1.5);
   },
 
+  [BuildingType.CircusMaximus]: (g, cx, cy) => {
+    g.fillStyle(0x000000, 0.18);
+    g.fillEllipse(cx, cy + 12, 42, 14);
+    g.fillStyle(BP.stoneDk, 1);
+    g.fillEllipse(cx, cy + 2, 42, 24);
+    g.fillStyle(BP.stone, 1);
+    g.fillEllipse(cx, cy + 1, 40, 22);
+    g.fillStyle(0xd8b878, 1);
+    g.fillEllipse(cx, cy + 1, 30, 15);
+    g.lineStyle(1.5, BP.stoneDk, 0.8);
+    g.strokeEllipse(cx, cy + 1, 30, 15);
+    for (const r of [22, 17]) {
+      g.lineStyle(1, BP.stoneDk, 0.5);
+      g.strokeEllipse(cx, cy + 1, r * 2 * 0.94, r * 2 * 0.62);
+    }
+    g.fillStyle(BP.marble, 1);
+    g.fillRect(cx - 9, cy - 1, 18, 3);
+    g.fillStyle(BP.brass, 1);
+    g.fillRect(cx - 1, cy - 6, 2, 8);
+    g.fillCircle(cx, cy - 7, 1.8);
+    g.fillStyle(BP.canvasRed, 1);
+    g.fillCircle(cx - 6, cy + 1, 1.3);
+    g.fillStyle(0x3a6a8a, 1);
+    g.fillCircle(cx + 6, cy + 1, 1.3);
+    for (const dx of [-19, -14, 14, 19]) {
+      bx(g, cx + dx - 1, cy - 8, 2.5, 4, BP.marble);
+    }
+  },
+
   [BuildingType.Fishery]: (g, cx, cy) => {    g.fillStyle(0x000000, 0.12);
     g.fillEllipse(cx, cy + 9, 30, 8);
     bx(g, cx - 12, cy - 6, 15, 11, BP.timber);
@@ -627,6 +656,7 @@ const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
   [BuildingType.Fishery]: 0x6a8a5a,
   [BuildingType.Temple]: 0xd8cdb8,
   [BuildingType.Library]: 0xb8a888,
+  [BuildingType.CircusMaximus]: 0xd0a878,
 };
 
 export class TileMap {
