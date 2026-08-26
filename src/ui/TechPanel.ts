@@ -120,15 +120,15 @@ export class TechPanel {
         let textColor: string = HEX.dim;
 
         if (researched) {
-          bgFill = 0x1e281a;
+          bgFill = C.panelHi;
           edge = colorNum;
           textColor = colorHex;
         } else if (researching) {
-          bgFill = 0x1a2230;
+          bgFill = C.panelHi;
           edge = C.info;
           textColor = HEX.info;
         } else if (available) {
-          bgFill = C.panelHi;
+          bgFill = C.cardFill;
           edge = C.brassDark;
           textColor = HEX.ivory;
         }

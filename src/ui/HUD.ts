@@ -1157,7 +1157,7 @@ export class HUD {
       });
 
       const buyBg = this.scene.add.graphics();
-      buyBg.fillStyle(0x1c2a1c, 0.95);
+      buyBg.fillStyle(C.panelHi, 0.95);
       buyBg.fillRoundedRect(ox + 272, yOff - 9, 62, 18, 4);
       buyBg.lineStyle(1, C.good, 0.7);
       buyBg.strokeRoundedRect(ox + 272, yOff - 9, 62, 18, 4);
@@ -1177,7 +1177,7 @@ export class HUD {
       buyHit.on("pointerout", () => buyBtn.setColor(HEX.good));
 
       const sellBg = this.scene.add.graphics();
-      sellBg.fillStyle(0x2a1c1a, 0.95);
+      sellBg.fillStyle(C.panelHi, 0.95);
       sellBg.fillRoundedRect(ox + 344, yOff - 9, 62, 18, 4);
       sellBg.lineStyle(1, C.bad, 0.7);
       sellBg.strokeRoundedRect(ox + 344, yOff - 9, 62, 18, 4);
@@ -1327,7 +1327,7 @@ export class HUD {
       });
       hit.on("pointerover", () => {
         bBg.clear();
-        bBg.fillStyle(0x352b1a, 0.97);
+        bBg.fillStyle(C.brass, 0.25);
         bBg.fillRoundedRect(bx - 90, cy + H / 2 - 76, 180, 40, 6);
         bBg.lineStyle(1, C.brassBright, 0.95);
         bBg.strokeRoundedRect(bx - 89.5, cy + H / 2 - 75.5, 179, 39, 6);

@@ -240,7 +240,7 @@ export class BuildPanel {
     const edge = locked ? C.panelEdge : canAfford ? C.brassDark : C.panelEdge;
 
     const bg = plaque(this.scene, cx, cy, w - 1, CARD_H, baseFill, edge);
-    const labelColor = locked ? "#8d8062" : canAfford ? HEX.ivory : "#9a8c6c";
+    const labelColor = locked ? HEX.dim : canAfford ? HEX.ivory : HEX.muted;
     const txt = label(this.scene, cx, cy - CARD_H / 2 + 8, def.name, {
       size: 9.5,
       color: labelColor,
@@ -464,7 +464,7 @@ export class BuildPanel {
       const w = btn.hit.width - 1;
       const h = CARD_H;
       repaint(btn.bg, cx, cy, w, h, selected ? C.panelHi : btn.baseFill, selected ? C.brassBright : btn.locked ? C.panelEdge : C.panelEdge);
-      btn.label.setColor(selected ? HEX.brassBright : btn.locked ? "#8d8062" : HEX.ivory);
+      btn.label.setColor(selected ? HEX.brassBright : btn.locked ? HEX.dim : HEX.ivory);
     }
   }
 
