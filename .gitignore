@@ -6,3 +6,5 @@ Thumbs.db
 
 scripts/.e2e.cjs
 scripts/*.png
+
+scripts/.playtest.cjs
