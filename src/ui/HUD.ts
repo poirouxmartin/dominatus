@@ -761,11 +761,14 @@ export class HUD {
 
     const isFinal = idx === OBJECTIVES.length - 1;
     if (isFinal) {
-      const settlers = Math.min(40, Math.floor(state.population.total));
+      const settlers = Math.min(50, Math.floor(state.population.total));
       const techs = Math.min(14, state.researchedTechs.length);
+      const circus = countType(state, BuildingType.CircusMaximus) > 0;
       this.objectiveText.setX(Viewport.w - 22);
       this.objectiveText.setText(
-        `\u25B6  WIN \u2014 settlers ${settlers}/40 \u00b7 techs ${techs}/14  OR  Circus + 25 happy settlers`
+        circus
+          ? `\u25B6  WIN \u2014 30 settlers at 80% happiness (now: ${Math.floor(state.population.total)} at ${Math.floor(state.population.happiness)}%)`
+          : `\u25B6  WIN \u2014 settlers ${settlers}/50 \u00b7 techs ${techs}/14  OR  Circus Maximus route`
       );
     } else {
       this.objectiveText.setX(Viewport.w - 22);

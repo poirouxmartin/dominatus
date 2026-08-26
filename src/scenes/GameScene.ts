@@ -545,9 +545,9 @@ export class GameScene extends Phaser.Scene {
       const hasCircus = this.state.buildings.some((b) => b.type === BuildingType.CircusMaximus);
       if (
         hasCircus &&
-        this.state.population.total >= 25 &&
-        this.state.population.happiness >= 75 &&
-        this.state.researchedTechs.length >= 8
+        this.state.population.total >= 30 &&
+        this.state.population.happiness >= 80 &&
+        this.state.researchedTechs.length >= 10
       ) {
         this.state.victory = true;
       }

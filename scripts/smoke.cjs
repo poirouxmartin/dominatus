@@ -116,7 +116,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // 5. victoire -> écran de fin
   await page.evaluate(() => {
     const gs = window.__dominatus.game.scene.getScene("GameScene");
-    gs.state.population.total = 40;
+    gs.state.population.total = 50;
     for (const t of [
       "philosophy", "irrigation", "masonry", "law", "engineering", "militia",
       "fortification", "conscription", "currency", "logistics", "writing",

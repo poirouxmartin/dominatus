@@ -71,7 +71,7 @@ function tick(state: GameState, sys: Systems): void {
   if (state.population.total >= VICTORY_POPULATION && state.researchedTechs.length >= VICTORY_TECHS) state.victory = true;
 
   const hasCircus = state.buildings.some((b) => b.type === BuildingType.CircusMaximus);
-  if (hasCircus && state.population.total >= 25 && state.population.happiness >= 75 && state.researchedTechs.length >= 8) {
+  if (hasCircus && state.population.total >= 30 && state.population.happiness >= 80 && state.researchedTechs.length >= 10) {
     state.victory = true;
   }
 
@@ -423,7 +423,7 @@ section("Victoire / défaite");
   }
   check("game over si la population disparaît", s2.gameOver, `pop=${s2.population.total}`);
 
-  // voie monument : Circus Maximus + 25 colons + 75% bonheur + 8 techs
+  // voie monument : Circus Maximus + 30 colons + 80% bonheur + 10 techs
   const s3 = new GameState();
   const sys3 = makeSystems();
   s3.resources.stone = 500;
@@ -432,17 +432,17 @@ section("Victoire / défaite");
   s3.resources.gold = 400;
   s3.resources.tools = 100;
   s3.researchedTechs.push("democracy");
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < 10; i++) {
     const spot = findTile(s3, TileType.Grass, 15, 10, 6);
     if (spot) s3.placeBuilding(BuildingType.House, spot.col, spot.row);
   }
   const circus = findTile(s3, TileType.Grass, 15, 10, 8);
   check("Circus Maximus plaçable", circus !== null && s3.placeBuilding(BuildingType.CircusMaximus, circus.col, circus.row) !== null);
-  s3.population.total = 25;
-  s3.population.happiness = 80;
-  for (let i = 0; i < 8; i++) s3.researchedTechs.push("tech" + i);
+  s3.population.total = 30;
+  s3.population.happiness = 82;
+  for (let i = 0; i < 10; i++) s3.researchedTechs.push("tech" + i);
   tick(s3, sys3);
-  check("victoire par le monument (Circus + 25 colons + 75% bonheur)", s3.victory, `pop=${s3.population.total} hap=${s3.population.happiness}`);
+  check("victoire par le monument (Circus + 30 colons + 80% bonheur)", s3.victory, `pop=${s3.population.total} hap=${s3.population.happiness} techs=${s3.researchedTechs.length}`);
 }
 
 // === 11b. Bâtiments récents ===============================================

@@ -73,8 +73,8 @@ function runPlaythrough(seed: number): RunReport {
     s.totalTicks++;
 
     if (s.population.total <= 0 && s.buildings.length > 0) s.gameOver = true;
-    if (s.population.total >= 40 && s.researchedTechs.length >= 14) s.victory = true;
-    if (s.buildings.some((b) => b.type === BuildingType.CircusMaximus) && s.population.total >= 25 && s.population.happiness >= 75 && s.researchedTechs.length >= 8) {
+    if (s.population.total >= 50 && s.researchedTechs.length >= 14) s.victory = true;
+    if (s.buildings.some((b) => b.type === BuildingType.CircusMaximus) && s.population.total >= 30 && s.population.happiness >= 80 && s.researchedTechs.length >= 10) {
       s.victory = true;
     }
     s.processEvents();

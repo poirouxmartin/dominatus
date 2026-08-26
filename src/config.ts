@@ -753,7 +753,7 @@ export const CITIZEN_HAPPINESS_THRESHOLD = 80;
 export const CITIZEN_FOOD_MULTIPLIER = 1.5;
 export const RESEARCH_PER_PERSON = 0.05;
 
-export const VICTORY_POPULATION = 40;
+export const VICTORY_POPULATION = 50;
 export const VICTORY_TECHS = 14;
 
 export const SAVE_KEY = "dominatus_save_v3";
