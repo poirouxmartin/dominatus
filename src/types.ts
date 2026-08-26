@@ -47,9 +47,8 @@ export enum BuildingType {
   Fishery = "fishery",
   Temple = "temple",
   Library = "library",
-  Vineyard = "vineyard",
-  Library = "library",
   CircusMaximus = "circusMaximus",
+  Vineyard = "vineyard",
   Forester = "forester",
   HuntingCabin = "huntingCabin",
 }
