@@ -612,6 +612,23 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     requiredTile: TileType.Water,
     color: 0x6a8a5a,
   },
+  [BuildingType.Vineyard]: {
+    type: BuildingType.Vineyard,
+    name: "Vineyard",
+    description: "Vines on trellises. Sells as wine: +2 gold and +1 food per 4 ticks. An alternative to farms.",
+    cost: { [ResourceType.Wood]: 25, [ResourceType.Gold]: 15 },
+    production: {
+      input: {},
+      output: { [ResourceType.Gold]: 2, [ResourceType.Food]: 1 },
+      ticksPerCycle: 4,
+      winterMultiplier: 0.4,
+    },
+    populationCapacity: 0,
+    populationNeed: 0,
+    size: { w: 1, h: 1 },
+    requiredTile: TileType.Farmable,
+    color: 0x7a5a7a,
+  },
   [BuildingType.Temple]: {
     type: BuildingType.Temple,
     name: "Temple",

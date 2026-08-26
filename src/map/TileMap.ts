@@ -536,6 +536,26 @@ const BUILDING_PAINTERS: Record<BuildingType, Painter> = {
     g.fillTriangle(cx + 12, cy - 19, cx + 12, cy - 15, cx + 18, cy - 17);
   },
 
+  [BuildingType.Vineyard]: (g, cx, cy) => {
+    g.lineStyle(1, 0x6a5232, 0.9);
+    for (let r = -1; r <= 1; r++) {
+      const y = cy + r * 8 - 1;
+      g.lineBetween(cx - 13, y + 2, cx + 13, y - 2);
+    }
+    for (let cIdx = -2; cIdx <= 2; cIdx++) {
+      const px = cx + cIdx * 6;
+      g.lineStyle(1.6, BP.timberDk, 1);
+      g.lineBetween(px, cy + 8, px, cy - 9);
+      g.fillStyle(0x5a7a3a, 1);
+      g.fillCircle(px, cy - 6, 2.4);
+      g.fillCircle(px, cy - 1, 2.4);
+      g.fillStyle(0x7a4a6a, 1);
+      g.fillCircle(px + 1.4, cy - 3.5, 1.2);
+    }
+    g.fillStyle(0x8a6a3a, 0.8);
+    g.fillEllipse(cx + 9, cy + 8, 6, 3);
+  },
+
   [BuildingType.Temple]: (g, cx, cy) => {
     g.fillStyle(0x000000, 0.15);
     g.fillEllipse(cx, cy + 12, 34, 8);
@@ -654,6 +674,7 @@ const MINIMAP_COLOR: Partial<Record<BuildingType, number>> = {
   [BuildingType.Amphitheater]: 0xd0a878,
   [BuildingType.Barracks]: 0x8a4a3a,
   [BuildingType.Fishery]: 0x6a8a5a,
+  [BuildingType.Vineyard]: 0x7a5a7a,
   [BuildingType.Temple]: 0xd8cdb8,
   [BuildingType.Library]: 0xb8a888,
   [BuildingType.CircusMaximus]: 0xd0a878,

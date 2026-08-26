@@ -50,7 +50,7 @@ const CATEGORIES: { key: string; label: string; types: BuildingType[] }[] = [
   {
     key: "village",
     label: "VILLAGE",
-    types: [BuildingType.House, BuildingType.Farm, BuildingType.Fishery, BuildingType.Well, BuildingType.Bathhouse, BuildingType.Garden, BuildingType.Chapel, BuildingType.Temple],
+    types: [BuildingType.House, BuildingType.Farm, BuildingType.Vineyard, BuildingType.Fishery, BuildingType.Well, BuildingType.Bathhouse, BuildingType.Garden, BuildingType.Chapel],
   },
   {
     key: "production",
