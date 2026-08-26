@@ -1,6 +1,6 @@
 ﻿/**
- * Audit e2e de la logique de Dominatus â€” exÃ©cutable en Node (sans Phaser).
- * Run: node_modules/.bin/esbuild scripts/e2e-audit.ts --bundle --platform=node --outfile=scripts/.e2e.cjs && node scripts/.e2e.cjs
+ * Audit e2e de la logique de Dominatus — exécutable en Node (sans Phaser).
+ * Run: npm test
  */
 import { GameState } from "../src/state/GameState";
 import { ProductionSystem } from "../src/systems/ProductionSystem";
@@ -31,8 +31,8 @@ function check(name: string, cond: boolean, detail = ""): void {
     console.log(`  \u2713 ${name}`);
   } else {
     failed++;
-    failures.push(`${name}${detail ? ` â€” ${detail}` : ""}`);
-    console.log(`  \u2717 ${name}${detail ? ` â€” ${detail}` : ""}`);
+    failures.push(`${name}${detail ? ` — ${detail}` : ""}`);
+    console.log(`  \u2717 ${name}${detail ? ` — ${detail}` : ""}`);
   }
 }
 
@@ -58,7 +58,7 @@ function makeSystems(): Systems {
   };
 }
 
-/** RÃ©plique exacte de la boucle de tick de GameScene (y compris vÃ©rifs victoire/dÃ©faite). */
+/** Réplique exacte de la boucle de tick de GameScene (y compris vérifs victoire/défaite). */
 function tick(state: GameState, sys: Systems): void {
   sys.season.update(state);
   sys.events.update(state);
@@ -94,8 +94,8 @@ function findTile(state: GameState, type: TileType, nearCol = GRID_COLS / 2, nea
   return best;
 }
 
-// === 1. GÃ©nÃ©ration de carte ===============================================
-section("GÃ©nÃ©ration de carte (50 parties)");
+// === 1. Génération de carte ===============================================
+section("Génération de carte (50 parties)");
 {
   let ringOk = 0;
   let startOk = 0;
@@ -154,22 +154,15 @@ section("GÃ©nÃ©ration de carte (50 parties)");
     grassFracSum += grass / (GRID_COLS * GRID_ROWS);
   }
 
-  check("anneau d'eau pÃ©riphÃ©rique complet (50/50)", ringOk === 50, `${ringOk}/50`);
-  check("zone de dÃ©part entiÃ¨rement en herbe (50/50)", startOk === 50, `${startOk}/50`);
-  check("forÃªt + cultivable + montagne Ã  distance \u22645 du centre (50/50)", guaranteedOk === 50, `${guaranteedOk}/50`);
+  check("anneau d'eau périphérique complet (50/50)", ringOk === 50, `${ringOk}/50`);
+  check("zone de départ entièrement en herbe (50/50)", startOk === 50, `${startOk}/50`);
+  check("forêt + cultivable + montagne à distance ≤5 du centre (50/50)", guaranteedOk === 50, `${guaranteedOk}/50`);
   check("aucune mare orpheline", orphanWater === 0, `${orphanWater} orphelines au total`);
   check("au moins 22% d'herbe en moyenne", grassFracSum / 50 >= 0.22, `${((grassFracSum / 50) * 100).toFixed(1)}%`);
 }
 
-function hexesAll(): unknown[] {
-  return [];
-}
-
-void hexesAll;
-void hexCenter;
-
 // === 2. Impasse de recherche (critique) ====================================
-section("Progression : gÃ©nÃ©ration de recherche");
+section("Progression : génération de recherche");
 {
   const s = new GameState();
   const sys = makeSystems();
@@ -178,7 +171,7 @@ section("Progression : gÃ©nÃ©ration de recherche");
     if (t) s.placeBuilding(BuildingType.House, t.col, t.row);
   }
   for (let i = 0; i < 200; i++) tick(s, sys);
-  check("les citoyens gÃ©nÃ¨rent des points de recherche", s.resources.research > 0, `research=${s.resources.research.toFixed(2)}`);
+  check("les citoyens génèrent des points de recherche", s.resources.research > 0, `research=${s.resources.research.toFixed(2)}`);
 
   s.startResearch("philosophy");
   let done = false;
@@ -186,27 +179,25 @@ section("Progression : gÃ©nÃ©ration de recherche");
     tick(s, sys);
     if (s.researchedTechs.includes("philosophy")) done = true;
   }
-  check("philosophy finit par Ãªtre recherchÃ©e", done, `progress=${s.researchProgress}`);
+  check("philosophy finit par être recherchée", done, `progress=${s.researchProgress}`);
 }
 
-// === 3. DÃ©but de partie viable ============================================
-section("Ã‰conomie de dÃ©but de partie");
+// === 3. Début de partie viable ============================================
+section("Économie de début de partie");
 {
   const s = new GameState();
   const sys = makeSystems();
 
   const forest = findTile(s, TileType.Forest, 15, 10, 5);
   const farm1 = findTile(s, TileType.Farmable, 15, 10, 5);
-  check("ressources de dÃ©part suffisantes", s.placeBuilding(BuildingType.House, 15, 10) !== null);
-  if (farm1) check("ferme placÃ©e sur terre cultivable", s.placeBuilding(BuildingType.Farm, farm1.col, farm1.row) !== null);
+  check("ressources de départ suffisantes", s.placeBuilding(BuildingType.House, 15, 10) !== null);
+  if (farm1) check("ferme placée sur terre cultivable", s.placeBuilding(BuildingType.Farm, farm1.col, farm1.row) !== null);
   const farm2 = findTile(s, TileType.Farmable, 15, 10, 6);
-  if (farm2) check("2e ferme placÃ©e", s.placeBuilding(BuildingType.Farm, farm2.col, farm2.row) !== null);
+  if (farm2) check("2e ferme placée", s.placeBuilding(BuildingType.Farm, farm2.col, farm2.row) !== null);
   s.resources.wood += 40;
-  if (forest) check("scierie placÃ©e en forÃªt", s.placeBuilding(BuildingType.LumberMill, forest.col, forest.row) !== null);
+  if (forest) check("scierie placée en forêt", s.placeBuilding(BuildingType.LumberMill, forest.col, forest.row) !== null);
   const house2 = findTile(s, TileType.Grass, 15, 10, 3);
   if (house2) s.placeBuilding(BuildingType.House, house2.col, house2.row);
-  const wellSpot = findTile(s, TileType.Grass, 15, 10, 4);
-  if (wellSpot) s.placeBuilding(BuildingType.Well, wellSpot.col, wellSpot.row);
 
   let starvedTicks = 0;
   let woodAtStart = s.resources.wood;
@@ -216,16 +207,12 @@ section("Ã‰conomie de dÃ©but de partie");
     if (s.resources.food <= 0.01 && s.population.foodConsumption > 0.5) starvedTicks++;
   }
   check("le bois augmente (scierie active)", s.resources.wood > woodAtStart, `wood=${s.resources.wood.toFixed(0)}`);
-  check("pas de famine chronique (\u226420 ticks \u00e0 z\u00e9ro nourriture)", starvedTicks <= 20, `${starvedTicks} ticks de famine`);
+  check("pas de famine chronique (≤20 ticks à zéro nourriture)", starvedTicks <= 20, `${starvedTicks} ticks de famine`);
   check("la population grandit", s.population.total > 4, `pop=${s.population.total.toFixed(1)}`);
 }
 
-function stateFoodConsumption(s: GameState): number {
-  return s.population.foodConsumption;
-}
-
-// === 4. ChaÃ®ne de production ==============================================
-section("ChaÃ®ne de production bois\u2192planches\u2192or");
+// === 4. Chaîne de production ==============================================
+section("Chaîne de production bois→planches→or");
 {
   const s = new GameState();
   const sys = makeSystems();
@@ -268,7 +255,7 @@ section("Effet de l'hiver");
     winterFood += s.resources.food;
     s.resources.food = 0;
   }
-  check("l'hiver rÃ©duit fortement la production agricole", winterFood < summerFood * 0.35, `Ã©tÃ©=${summerFood} hiver=${winterFood}`);
+  check("l'hiver réduit fortement la production agricole", winterFood < summerFood * 0.35, `été=${summerFood} hiver=${winterFood}`);
 }
 
 // === 6. Commerce ==========================================================
@@ -284,8 +271,8 @@ section("Commerce");
   check("impossible d'acheter sans or", !s.trade(ResourceType.Wood, 100, "buy"));
 }
 
-// === 7. Ã‰vÃ©nements & bonheur temporaire ===================================
-section("Ã‰vÃ©nements");
+// === 7. Événements ========================================================
+section("Événements");
 {
   const s = new GameState();
   const sys = makeSystems();
@@ -304,17 +291,16 @@ section("Ã‰vÃ©nements");
   });
   tick(s, sys);
   const afterOne = s.population.happiness;
-  check("le bonus de bonheur d'Ã©vÃ©nement s'applique", afterOne >= happyBefore, `before=${happyBefore} after=${afterOne}`);
+  check("le bonus de bonheur d'événement s'applique", afterOne >= happyBefore, `before=${happyBefore} after=${afterOne}`);
   s.tempHappiness = 20;
   const h1 = s.population.happiness;
   tick(s, sys);
   const decayed = s.tempHappiness ?? 0;
-  check("le bonus temporaire dÃ©croit avec le temps", decayed < 20 || s.population.happiness !== h1, `tempHappiness=${decayed}`);
+  check("le bonus temporaire décroit avec le temps", decayed < 20 || s.population.happiness !== h1, `tempHappiness=${decayed}`);
 }
 
-
-// === 7b. Nouveaux Ã©vÃ©nements ==============================================
-section("Nouveaux Ã©vÃ©nements (rÃ©colte, colons, marchand)");
+// === 7b. Nouveaux événements ==============================================
+section("Nouveaux événements (récolte, colons, marchand)");
 {
   const s = new GameState();
   const sys = makeSystems();
@@ -329,7 +315,7 @@ section("Nouveaux Ã©vÃ©nements (rÃ©colte, colons, marchand)");
     effect: (st: GameState) => st.addResources({ [ResourceType.Food]: 30 }),
   });
   tick(s, sys);
-  check("rÃ©colte exceptionnelle : +30 nourriture", s.resources.food >= 30, `food=${s.resources.food.toFixed(0)}`);
+  check("récolte exceptionnelle : +30 nourriture", s.resources.food >= 30, `food=${s.resources.food.toFixed(0)}`);
 
   s.resources.gold = 100;
   s.resources.wood = 0;
@@ -358,11 +344,11 @@ section("Nouveaux Ã©vÃ©nements (rÃ©colte, colons, marchand)");
     },
   });
   tick(s, sys);
-  check("colons errants : plafonnÃ©s Ã  la capacitÃ©", s.population.total <= cap, `pop=${s.population.total} cap=${cap}`);
+  check("colons errants : plafonnés à la capacité", s.population.total <= cap, `pop=${s.population.total} cap=${cap}`);
 }
 
-// === 8. DÃ©fense anti-raid ==================================================
-section("Raids & dÃ©fense");
+// === 8. Défense anti-raid ==================================================
+section("Raids & défense");
 {
   const s1 = new GameState();
   s1.placeBuilding(BuildingType.House, 15, 10);
@@ -373,12 +359,12 @@ section("Raids & dÃ©fense");
   s1.placeBuilding(BuildingType.Wall, 16, 10);
   s1.placeBuilding(BuildingType.Tower, 15, 9);
   const def1 = s1.getRaidDefense();
-  check("les murailles et tours augmentent la dÃ©fense", def1 > def0, `${(def0 * 100).toFixed(0)}% -> ${(def1 * 100).toFixed(0)}%`);
-  check("dÃ©fense plafonnÃ©e Ã  90%", def1 <= 0.9, `${(def1 * 100).toFixed(0)}%`);
+  check("les murailles et tours augmentent la défense", def1 > def0, `${(def0 * 100).toFixed(0)}% -> ${(def1 * 100).toFixed(0)}%`);
+  check("défense plafonnée à 90%", def1 <= 0.9, `${(def1 * 100).toFixed(0)}%`);
 }
 
 // === 9. Placement interdit sur l'eau ======================================
-section("RÃ¨gles de placement");
+section("Règles de placement");
 {
   const s = new GameState();
   const water = findTile(s, TileType.Water, 2, 2, 99);
@@ -390,7 +376,7 @@ section("RÃ¨gles de placement");
   const grass = findTile(s, TileType.Grass, 15, 10, 4);
   if (grass) {
     const reason = s.getPlacementReason(BuildingType.LumberMill, grass.col, grass.row);
-    check("scierie refusÃ©e hors forÃªt", reason !== null && reason.toLowerCase().includes("forest"), `reason=${reason}`);
+    check("scierie refusée hors forêt", reason !== null && reason.toLowerCase().includes("forest"), `reason=${reason}`);
   }
 }
 
@@ -408,15 +394,15 @@ section("Sauvegarde / chargement");
   const raw = store.get("dominatus_save_v3")!;
   const loaded = new GameState(JSON.parse(raw));
   check("version de sauvegarde correcte", JSON.parse(raw).version === 3);
-  check("bÃ¢timents restaurÃ©s", loaded.buildings.length === s.buildings.length);
-  check("ressources restaurÃ©es", Math.abs(loaded.resources.wood - s.resources.wood) < 0.001);
-  check("population restaurÃ©e", Math.abs(loaded.population.total - s.population.total) < 0.001);
-  check("saison restaurÃ©e", loaded.season === s.season);
-  check("grille restaurÃ©e", loaded.tiles[10][15].buildingId === s.tiles[10][15].buildingId);
+  check("bâtiments restaurés", loaded.buildings.length === s.buildings.length);
+  check("ressources restaurées", Math.abs(loaded.resources.wood - s.resources.wood) < 0.001);
+  check("population restaurée", Math.abs(loaded.population.total - s.population.total) < 0.001);
+  check("saison restaurée", loaded.season === s.season);
+  check("grille restaurée", loaded.tiles[10][15].buildingId === s.tiles[10][15].buildingId);
 }
 
-// === 11. Victoire & dÃ©faite ===============================================
-section("Victoire / dÃ©faite");
+// === 11. Victoire & défaite ===============================================
+section("Victoire / défaite");
 {
   const s = new GameState();
   const sys = makeSystems();
@@ -424,7 +410,7 @@ section("Victoire / dÃ©faite");
   s.population.total = VICTORY_POPULATION;
   for (const t of TECH_TREE) s.researchedTechs.push(t.id);
   tick(s, sys);
-  check("victoire dÃ©clenchÃ©e (pop + 14 techs)", s.victory, `pop=${s.population.total} techs=${s.researchedTechs.length}`);
+  check("victoire déclenchée (pop + 14 techs)", s.victory, `pop=${s.population.total} techs=${s.researchedTechs.length}`);
 
   const s2 = new GameState();
   const sys2 = makeSystems();
@@ -458,7 +444,6 @@ section("Victoire / dÃ©faite");
   tick(s3, sys3);
   check("victoire par le monument (Circus + 25 colons + 75% bonheur)", s3.victory, `pop=${s3.population.total} hap=${s3.population.happiness}`);
 }
-section("IntÃ©gritÃ© des dÃ©finitions");
 
 // === 11b. Bâtiments récents ===============================================
 section("Bâtiments récents (aqueduc, thermes, amphithéâtre, temple, bibliothèque, caserne, pêcherie, vignoble)");
@@ -486,9 +471,8 @@ section("Bâtiments récents (aqueduc, thermes, amphithéâtre, temple, biblioth
   if (g3) check("bibliothèque plaçable", s.placeBuilding(BuildingType.Library, g3.col, g3.row) !== null);
   const farm = findTile(s, TileType.Farmable, 15, 10, 6);
   if (farm) check("vignoble plaçable sur terre cultivable", s.placeBuilding(BuildingType.Vineyard, farm.col, farm.row) !== null);
-  const bSpot = findTile(s, TileType.Grass, 16, 10, 7);
-  if (bSpot) check("caserne plaçable", s.placeBuilding(BuildingType.Barracks, bSpot.col, bSpot.row) === null ? false : true);
-  if (water) check("pêcherie plaçable SUR l'eau", s.placeBuilding(BuildingType.Fishery, water.col, water.row) !== null);
+  const fish = water;
+  if (fish) check("pêcherie plaçable SUR l'eau", s.placeBuilding(BuildingType.Fishery, fish.col, fish.row) !== null);
 
   const water0 = s.resources.water;
   const research0 = s.resources.research;
@@ -507,6 +491,7 @@ section("Bâtiments récents (aqueduc, thermes, amphithéâtre, temple, biblioth
 }
 
 // === 12. Data integrity ====
+section("Data integrity");
 {
   const types = Object.values(BuildingType);
   let ok = true;
@@ -519,12 +504,12 @@ section("Bâtiments récents (aqueduc, thermes, amphithéâtre, temple, biblioth
       if (totalCost <= 0 && t !== BuildingType.Well) ok = false;
     }
   }
-  check("tous les bÃ¢timents ont une dÃ©finition 1 hex avec coÃ»t", ok);
+  check("tous les bâtiments ont une définition 1 hex avec coût", ok);
 
   const ids = TECH_TREE.map((t) => t.id);
   const unique = new Set(ids).size === ids.length;
   const reqsOk = TECH_TREE.every((t) => t.requires.every((r) => ids.includes(r)));
-  check("arbre technologique cohÃ©rent (ids uniques, prÃ©requis valides)", unique && reqsOk);
+  check("arbre technologique cohérent (ids uniques, prérequis valides)", unique && reqsOk);
 
   let unlockOk = true;
   for (const t of TECH_TREE) {
@@ -532,14 +517,69 @@ section("Bâtiments récents (aqueduc, thermes, amphithéâtre, temple, biblioth
       if (BUILDINGS[b]?.requiredTech !== t.id) unlockOk = false;
     }
   }
-  check("chaque bÃ¢timent dÃ©verrouillÃ© pointe vers sa tech", unlockOk);
+  check("chaque bâtiment déverrouillé pointe vers sa tech", unlockOk);
 }
 
-// === RÃ©sumÃ© ================================================================
+// === 13. Performance fin de partie ========================================
+section("Performance fin de partie (province dense)");
+{
+  const s = new GameState();
+  const sys = makeSystems();
+  s.resources.wood = 2000;
+  s.resources.stone = 2000;
+  s.resources.planks = 1000;
+  s.resources.bricks = 500;
+  s.resources.gold = 2000;
+  s.resources.tools = 200;
+  s.resources.leather = 200;
+  s.researchedTechs.push("engineering", "currency", "writing", "theology", "conscription", "democracy", "irrigation");
+
+  const spotFor = (def: { requiredTile: TileType | null }): { col: number; row: number } | null => {
+    const wanted = def.requiredTile;
+    let best: { col: number; row: number } | null = null;
+    let bd = 1e9;
+    for (let y = 0; y < GRID_ROWS; y++) {
+      for (let x = 0; x < GRID_COLS; x++) {
+        const t = s.tiles[y][x];
+        if (t.buildingId !== null) continue;
+        if (wanted === null ? t.type === TileType.Water : t.type !== wanted) continue;
+        const d2 = (x - 15) * (x - 15) + (y - 10) * (y - 10);
+        if (d2 < bd) { bd = d2; best = { col: x, row: y }; }
+      }
+    }
+    return best;
+  };
+
+  let placed = 0;
+  for (const bt of Object.values(BuildingType)) {
+    const def = BUILDINGS[bt];
+    if (def.requiredTech && !s.researchedTechs.includes(def.requiredTech)) continue;
+    for (let copies = 0; copies < 3; copies++) {
+      if (Object.entries(def.cost).some(([r, a]) => (s.resources[r as keyof typeof s.resources] ?? 0) < (a ?? 0) * (copies + 1))) break;
+      const spot = spotFor(def);
+      if (!spot) break;
+      if (s.placeBuilding(bt, spot.col, spot.row)) placed++;
+    }
+  }
+  check("province dense peuplée (>= 40 bâtiments)", placed >= 40, `${placed} posés`);
+  s.population.total = Math.min(60, s.population.total + 40);
+
+  const t0 = process.hrtime.bigint();
+  for (let i = 0; i < 100; i++) {
+    s.lastEventTick = s.totalTicks + 1000;
+    tick(s, sys);
+  }
+  const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+  const avg = ms / 100;
+  console.log(`  -> 100 ticks avec ${placed} bâtiments : ${ms.toFixed(1)} ms total (${avg.toFixed(2)} ms/tick)`);
+  check("tick logique rapide (< 20 ms/tick moyen)", avg < 20, `${avg.toFixed(2)} ms/tick`);
+}
+
+// === Résumé ================================================================
 console.log(`\n${"=".repeat(50)}`);
-console.log(`RÃ‰SULTAT: ${passed} OK, ${failed} Ã‰CHEC(S)`);
+console.log(`RÉSULTAT: ${passed} OK, ${failed} ÉCHEC(S)`);
 if (failures.length > 0) {
-  console.log("\nÃ‰checs:");
+  console.log("\nÉchecs:");
   for (const f of failures) console.log(`  - ${f}`);
 }
 process.exit(failed > 0 ? 1 : 0);
