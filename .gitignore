@@ -8,3 +8,8 @@ scripts/.e2e.cjs
 scripts/*.png
 
 scripts/.playtest.cjs
+
+# Environment variables
+.env
+.env.local
+.env.*.local
