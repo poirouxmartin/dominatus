@@ -8,7 +8,7 @@ Inspiré d'Anno, Civilization, Zoo Tycoon et Frostpunk.
 
 ```bash
 npm install
-npm run dev        # → http://localhost:5174/
+npm run dev        # → http://localhost:5173/ (port par défaut de Vite, aucun vite.config)
 ```
 
 ## Scripts
