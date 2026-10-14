@@ -1,80 +1,84 @@
 # Dominatus 🏛️
 
-City-builder stratégique dans la Rome antique — carte hexagonale, saisons, économie à chaînes, raids et monuments.
+Strategic city-builder set in ancient Rome — hex map, seasons, chained economy, raids and monuments.
 
-Inspiré d'Anno, Civilization, Zoo Tycoon et Frostpunk.
+Inspired by Anno, Civilization, Zoo Tycoon and Frostpunk.
 
-## Lancer le jeu
+## Run the game
 
 ```bash
 npm install
-npm run dev        # → http://localhost:5173/ (port par défaut de Vite, aucun vite.config)
+npm run dev        # → http://localhost:5173/ (Vite's default port, no vite.config)
 ```
 
 ## Scripts
 
-| Commande | Rôle |
+| Command | Purpose |
 |---|---|
-| `npm run dev` | Serveur de développement (HMR) |
-| `npm test` | Audit e2e de la logique — 54 assertions (Node, sans rendu) |
-| `npm run smoke` | Régression navigateur complète (Chrome headless) |
-| `npm run playtest` | Une IA joue vers la victoire et rapporte les données d'équilibrage (`MONUMENT=1` pour la stratégie monument) |
-| `npm run build` | Build production (`dist/`) |
-| `npm run preview` | Servir le build |
+| `npm run dev` | Development server (HMR) |
+| `npm test` | End-to-end audit of the logic — 54 assertions (Node, no rendering) |
+| `npm run smoke` | Full browser regression run (headless Chrome) |
+| `npm run playtest` | An AI plays toward victory and reports balancing data (`MONUMENT=1` for the monument strategy) |
+| `npm run build` | Production build (`dist/`) |
+| `npm run preview` | Serve the build |
 
-## Le jeu
+## The game
 
-- **Carte hexagonale** générée (île entourée de mer, biomes en massifs : forêts de cyprès, montagnes, terres cultivables)
-- **4 saisons** de 30 ticks : hiver ralentit les fermes, météo particulaire (neige, pluie, pétales), musique générative par saison
-- **31 bâtiments romains** : chaque ressource a sa chaîne (bois → planches → caserne, pierre → briques → thermes, or → amphithéâtre…)
-- **Économie à débouchés** : l'eau nourrit thermes, l'or finance l'amphithéâtre et le Circus Maximus, le cuir et les outils arment la caserne
-- **Événements contextuels** : tempêtes, raids, caravanes, récoltes exceptionnelles, marchands, colons errants…
-- **2 voies de victoire** :
-  - **Grande Province** — 50 colons + 14 technologies
-  - **Monument** — Circus Maximus + 30 colons à 80% de bonheur + 10 technologies
-- **PWA** : installable, jouable hors-ligne
+- **Generated hex map** (island surrounded by sea, biomes in clusters: cypress forests, mountains, farmland)
+- **4 seasons** of 30 ticks: winter slows farms, particle weather (snow, rain, petals), generative music per season
+- **31 Roman buildings**: each resource has its own chain (wood → planks → barracks, stone → bricks → baths, gold → amphitheatre…)
+- **Demand-driven economy**: water feeds the baths, gold funds the amphitheatre and the Circus Maximus, leather and tools equip the barracks
+- **Contextual events**: storms, raids, caravans, exceptional harvests, merchants, wandering settlers…
+- **2 victory paths**:
+  - **Grand Province** — 50 settlers + 14 technologies
+  - **Monument** — Circus Maximus + 30 settlers at 80% happiness + 10 technologies
+- **PWA**: installable, playable offline
 
-## Contrôles
+## Controls
 
-| Touche | Action |
+| Key | Action |
 |---|---|
-| `1-9` | Sélectionner un bâtiment |
-| Clic gauche | Placer / inspecter |
-| Clic droit | Annuler / démolir (50% remboursé) |
-| `WASD` · molette-clic | Déplacer la carte |
-| Molette / `+` `-` | Zoom |
-| `SPACE` / `P` | Vitesse / pause |
-| `E` | Panneau Province (économie détaillée) |
-| `T` · `R` · `L` | Commerce · Recherche · Chronique |
-| `M` · `H` | Mute · Aide |
+| `1-9` | Select a building |
+| Left click | Place / inspect |
+| Right click | Cancel / demolish (50% refunded) |
+| `WASD` · middle click | Move the map |
+| Mouse wheel / `+` `-` | Zoom |
+| `SPACE` / `P` | Speed / pause |
+| `E` | Province panel (detailed economy) |
+| `T` · `R` · `L` | Trade · Research · Chronicle |
+| `M` · `H` | Mute · Help |
 
-## Direction artistique
+## Art direction
 
-Trois palettes commutables via `?da=1|2|3` (comparatif : `/da-preview.html`) :
+Three palettes, switchable via `?da=1|2|3` (comparison: `/da-preview.html`):
 
-1. **Bronze & Noyer** (défaut) — encre nocturne chaude, bronze et laiton
-2. **Parchemin d'Empire** — panneaux ivoire, encre brune
-3. **Marbre & Pourpre** — marbre clair, liseré pourpre impérial
+1. **Bronze & Walnut** (default) — warm night-ink, bronze and brass
+2. **Imperial Parchment** — ivory panels, brown ink
+3. **Marble & Purple** — light marble, imperial purple trim
 
-Détails dans [`docs/ART_DIRECTION.md`](docs/ART_DIRECTION.md).
+Details in [`docs/ART_DIRECTION.md`](docs/ART_DIRECTION.md).
 
 ## Tests
 
-- **`npm test`** : 54 assertions sur la logique pure (génération de carte sur 50 graines, économie, hiver, raids, save/load, double victoire, intégrité des données, perf fin de partie)
-- **`npm run smoke`** : joue réellement au jeu dans Chrome headless (démarrage → construction → saisons → victoire → relance)
-- **`npm run playtest`** : un bot suit le tutoriel puis optimise vers la victoire ; rapporte durée, famine, bonheur min — l'outil d'équilibrage
+- **`npm test`**: 54 assertions on pure logic (map generation over 50 seeds, economy, winter, raids, save/load, double victory, data integrity, end-game performance)
+- **`npm run smoke`**: plays the game for real in headless Chrome (start → build → seasons → victory → restart)
+- **`npm run playtest`**: a bot follows the tutorial, then optimises toward victory; reports duration, starvation and minimum happiness — the balancing tool
 
 ## Architecture
 
 ```
 src/
-  audio/    AudioManager — SFX et musique génératifs (WebAudio, zéro asset)
-  map/      hex.ts (maths hexagonales), TileMap.ts (rendu peint + cache)
-  scenes/   Title, Game, UI (caméra dédiée) — PWA-ready
+  audio/    AudioManager — SFX and generative music (WebAudio, zero assets)
+  map/      hex.ts (hex maths), TileMap.ts (painted rendering + cache)
+  scenes/   Title, Game, UI (dedicated camera) — PWA-ready
   systems/  Production, Population, Season, Event, Tech
-  state/    GameState — source unique de vérité, save v3
-  ui/       HUD, BuildPanel, TechPanel, EventLog, Weather, theme (3 palettes), icons (vectoriels)
+  state/    GameState — single source of truth, save v3
+  ui/       HUD, BuildPanel, TechPanel, EventLog, Weather, theme (3 palettes), icons (vector)
 scripts/    e2e-audit.ts, smoke.cjs, playtest-sim.ts, da-preview.cjs, visual-debug.cjs
 ```
 
-Stack : TypeScript · Phaser 3 · Vite. Aucune dépendance runtime hors Phaser.
+Stack: TypeScript · Phaser 3 · Vite. No runtime dependencies beyond Phaser.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
